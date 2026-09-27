@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "outline": "#76777d", "on-tertiary-container": "#339650", "on-background": "#0b1c30", "primary": "#000000", "on-tertiary-fixed": "#00210a", "on-secondary": "#ffffff", "on-surface": "#0b1c30", "surface-bright": "#f8f9ff", "on-surface-variant": "#45464d", "on-secondary-container": "#fefcff", "secondary-fixed-dim": "#b4c5ff", "primary-fixed": "#dae2fd", "tertiary-fixed": "#95f8a7", "on-secondary-fixed-variant": "#003ea8", "inverse-on-surface": "#eaf1ff", "on-tertiary": "#ffffff", "surface": "#f8f9ff", "tertiary-fixed-dim": "#79db8d", "on-primary-container": "#7c839b", "background": "#f8f9ff", "inverse-primary": "#bec6e0", "inverse-surface": "#213145", "on-tertiary-fixed-variant": "#005323", "on-secondary-fixed": "#00174b", "on-primary-fixed": "#131b2e", "error": "#ba1a1a", "surface-container-lowest": "#ffffff", "error-container": "#ffdad6", "secondary": "#0051d5", "primary-container": "#131b2e", "on-primary-fixed-variant": "#3f465c", "surface-container-high": "#dce9ff", "surface-container-low": "#eff4ff", "on-primary": "#ffffff", "secondary-fixed": "#dbe1ff", "surface-container": "#e5eeff", "surface-container-highest": "#d3e4fe", "tertiary": "#000000", "secondary-container": "#316bf3", "surface-dim": "#cbdbf5", "primary-fixed-dim": "#bec6e0", "tertiary-container": "#00210a", "on-error-container": "#93000a", "on-error": "#ffffff", "surface-tint": "#565e74", "outline-variant": "#c6c6cd", "surface-variant": "#d3e4fe" }, borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, spacing: { "space-md": "1rem", "space-lg": "1.5rem", "gutter": "1rem", "space-xs": "0.25rem", "space-xl": "2.5rem", "space-sm": "0.5rem", "margin": "1rem" }, fontFamily: { "headline-sm": ["Noto Sans"], "body-sm": ["Noto Sans"], "label-md": ["Noto Sans"], "headline-md": ["Noto Sans"], "code-sm": ["JetBrains Mono"], "token-display": ["JetBrains Mono"], "headline-lg": ["Noto Sans"], "headline-xl-mobile": ["Noto Sans"], "body-lg": ["Noto Sans"], "label-lg": ["Noto Sans"], "token-display-mobile": ["JetBrains Mono"], "body-md": ["Noto Sans"], "headline-xl": ["Noto Sans"] }, fontSize: { "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }], "code-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }], "token-display": ["64px", { "lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "headline-lg": ["24px", { "lineHeight": "32px", "fontWeight": "700" }], "headline-xl-mobile": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "500" }], "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }], "token-display-mobile": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.01em", "fontWeight": "700" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "headline-xl": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }] } } } };</script></head><body class="bg-surface font-body-md text-on-surface flex flex-col min-h-screen antialiased"><header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] pt-safe"><div class="h-16 px-gutter flex items-center justify-between"><div class="flex items-center gap-space-sm"><svg aria-label="Counter Drop" class="h-8 w-auto object-contain shrink-0" height="120" role="img" style="width:40px;height:40px" viewbox="0 0 120 120" width="120" xmlns="http://www.w3.org/2000/svg">
+<rect fill="#0F172A" height="120" rx="16" width="120"></rect>
+<!-- Paper sheet icon -->
+<path d="M34 26C34 22.6863 36.6863 20 40 20H66L86 40V94C86 97.3137 83.3137 100 80 100H40C36.6863 100 34 97.3137 34 94V26Z" fill="#FFFFFF"></path>
+<!-- Corner fold -->
+<path d="M66 20V38C66 39.1046 66.8954 40 68 40H86L66 20Z" fill="#CBD5E1"></path>
+<!-- Downward fast drop arrow in solid cobalt blue -->
+<path d="M60 48V78M60 78L48 66M60 78L72 66" stroke="#2563EB" stroke-linecap="round" stroke-linejoin="round" stroke-width="6"></path>
+<!-- Counter tray slot line -->
+<line stroke="#0F172A" stroke-linecap="round" stroke-width="4" x1="44" x2="76" y1="88" y2="88"></line>
+</svg><div class="flex flex-col"><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight leading-none">Counter Drop</span></div><span class="font-body-sm text-body-sm text-on-surface-variant leading-tight flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px] text-secondary">near_me</span>Dadar West · Mumbai</span></div></div><div class="flex items-center gap-space-sm"><div aria-label="Language Selector" class="flex items-center bg-surface-container rounded-full p-0.5" role="group"><button class="min-h-[28px] px-2 py-0.5 rounded-full bg-surface-container-lowest text-on-surface font-label-md text-[11px] shadow-sm font-bold" type="button">EN</button><button class="min-h-[28px] px-2 py-0.5 rounded-full text-on-surface-variant hover:text-on-surface font-label-md text-[11px]" type="button">हिं</button><button class="min-h-[28px] px-2 py-0.5 rounded-full text-on-surface-variant hover:text-on-surface font-label-md text-[11px]" type="button">मरा</button></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 pb-24 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<!-- Cluster Header Strip (Utilitarian & Civic Wayfinding) -->
+<section class="bg-surface-container-low px-gutter py-space-sm shadow-sm">
+<div class="flex items-center justify-between gap-space-xs">
+<div class="flex items-center gap-space-xs min-w-0">
+<span class="material-symbols-outlined text-secondary text-[20px] flex-shrink-0">hub</span>
+<div class="truncate">
+<span class="font-headline-sm text-headline-sm text-on-surface block leading-tight truncate">Dadar Station Cluster</span>
+<span class="font-label-md text-label-md text-on-surface-variant flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-on-tertiary-container inline-block"></span>
+            12 shops active · Live sync
+          </span>
+</div>
+</div>
+<button aria-label="Change station cluster" class="min-h-[48px] px-space-sm flex items-center gap-1 rounded-xl bg-surface-container text-secondary font-label-md text-label-md active:bg-surface-container-high transition-colors flex-shrink-0" type="button">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+<span>Change</span>
+</button>
+</div>
+<!-- Cluster Sub-zone Quick Toggles -->
+<div aria-label="Station Zone Filters" class="flex items-center gap-space-xs overflow-x-auto pt-space-sm pb-1 no-scrollbar" role="tablist">
+<button aria-selected="true" class="zone-pill min-h-[48px] px-space-md py-space-xs rounded-xl bg-primary text-on-primary font-label-md text-label-md whitespace-nowrap transition-transform active:scale-95 shadow-sm" role="tab" type="button">
+        Platform 1 West
+      </button>
+<button aria-selected="false" class="zone-pill min-h-[48px] px-space-md py-space-xs rounded-xl bg-surface-container text-on-surface font-label-md text-label-md whitespace-nowrap transition-transform active:scale-95" role="tab" type="button">
+        Platform 4 East
+      </button>
+<button aria-selected="false" class="zone-pill min-h-[48px] px-space-md py-space-xs rounded-xl bg-surface-container text-on-surface font-label-md text-label-md whitespace-nowrap transition-transform active:scale-95" role="tab" type="button">
+        Kabutarkhana
+      </button>
+<button aria-selected="false" class="zone-pill min-h-[48px] px-space-md py-space-xs rounded-xl bg-surface-container text-on-surface font-label-md text-label-md whitespace-nowrap transition-transform active:scale-95" role="tab" type="button">
+        Swami Samarth Chk
+      </button>
+</div>
+</section>
+<!-- Live Search & Operational Filters -->
+<section class="px-gutter pt-space-md pb-space-sm flex flex-col gap-space-sm">
+<div class="relative w-full">
+<div class="absolute inset-y-0 left-0 pl-space-md flex items-center pointer-events-none text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="w-full h-12 pl-11 pr-11 bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded-xl shadow-sm focus:outline-none focus:bg-surface-container-low transition-colors" placeholder="Search shop name, speed, service..." type="text"/>
+<button aria-label="Clear or voice search" class="absolute inset-y-0 right-0 pr-space-md flex items-center text-on-surface-variant min-h-[48px] min-w-[48px] justify-center" type="button">
+<span class="material-symbols-outlined text-[20px]">mic</span>
+</button>
+</div>
+<!-- Quick Attribute Pills -->
+<div aria-label="Quick Filters" class="flex items-center gap-space-xs overflow-x-auto pb-1 no-scrollbar" role="region">
+<button class="filter-pill min-h-[48px] px-space-sm py-space-xs rounded-full bg-surface-container-highest text-on-surface font-label-md text-label-md flex items-center gap-1 whitespace-nowrap active:bg-secondary active:text-on-secondary transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[16px] text-on-tertiary-container" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span>Open Now</span>
+</button>
+<button class="filter-pill min-h-[48px] px-space-sm py-space-xs rounded-full bg-surface-container text-on-surface font-label-md text-label-md flex items-center gap-1 whitespace-nowrap active:bg-secondary active:text-on-secondary transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">bolt</span>
+<span>Shortest Wait (&lt;10m)</span>
+</button>
+<button class="filter-pill min-h-[48px] px-space-sm py-space-xs rounded-full bg-surface-container text-on-surface font-label-md text-label-md flex items-center gap-1 whitespace-nowrap active:bg-secondary active:text-on-secondary transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">palette</span>
+<span>Color Xerox</span>
+</button>
+<button class="filter-pill min-h-[48px] px-space-sm py-space-xs rounded-full bg-surface-container text-on-surface font-label-md text-label-md flex items-center gap-1 whitespace-nowrap active:bg-secondary active:text-on-secondary transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">layers</span>
+<span>Lamination</span>
+</button>
+<button class="filter-pill min-h-[48px] px-space-sm py-space-xs rounded-full bg-surface-container text-on-surface font-label-md text-label-md flex items-center gap-1 whitespace-nowrap active:bg-secondary active:text-on-secondary transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">badge</span>
+<span>Aadhaar Print</span>
+</button>
+</div>
+</section>
+<!-- Sticky In-Queue Transit Alert Bar (UC-C13 Ongoing Token Display) -->
+<section class="px-gutter pt-space-xs pb-space-sm">
+<div class="bg-primary text-on-primary rounded-xl p-space-md shadow-md flex items-center justify-between gap-space-sm transition-transform active:scale-[0.99]">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-11 h-11 rounded-lg bg-surface-container-lowest text-primary flex flex-col items-center justify-center flex-shrink-0">
+<span class="font-code-sm text-[10px] uppercase font-bold tracking-tight text-on-surface-variant leading-none">Token</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface leading-none mt-0.5">A-07</span>
+</div>
+<div class="min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-tertiary-fixed inline-block animate-pulse"></span>
+<span class="font-label-md text-label-md text-tertiary-fixed leading-tight uppercase tracking-wider">Printing Now</span>
+</div>
+<p class="font-body-sm text-body-sm text-surface-container-high truncate mt-0.5">Imran Xerox · ready in ~3 min</p>
+</div>
+</div>
+<button aria-label="View Active Token Details" class="min-h-[48px] min-w-[48px] flex items-center justify-center rounded-lg bg-primary-container text-on-primary hover:bg-secondary transition-colors" type="button">
+<span class="material-symbols-outlined text-[22px]">arrow_forward</span>
+</button>
+</div>
+</section>
+<!-- Direct Scan QR Express Strip -->
+<section class="px-gutter pb-space-md">
+<div class="bg-secondary-fixed text-on-secondary-fixed rounded-xl p-space-md flex items-center justify-between gap-space-sm shadow-sm">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-10 h-10 rounded-full bg-secondary text-on-secondary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[22px]">qr_code_scanner</span>
+</div>
+<div class="min-w-0">
+<span class="font-headline-sm text-headline-sm text-on-secondary-fixed block leading-tight truncate">Have a file ready?</span>
+<span class="font-body-sm text-body-sm text-on-secondary-fixed-variant truncate block">At a shop? Scan its QR to upload</span>
+</div>
+</div>
+<button class="min-h-[48px] px-space-md py-space-xs rounded-xl bg-secondary text-on-secondary font-label-md text-label-md flex items-center gap-1.5 flex-shrink-0 active:scale-95 transition-transform shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px]">photo_camera</span>
+<span>Scan QR</span>
+</button>
+</div>
+</section>
+<!-- Shop Listing Section (Best Pick Algorithmic Ranking) -->
+<main class="px-gutter flex flex-col gap-space-md pb-space-xl">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Shops near you</h2>
+<span class="font-code-sm text-code-sm text-on-surface-variant uppercase tracking-wider">Sorted by best pick</span>
+</div>
+<!-- Shop Card 1: Imran Xerox & Cyber Centre (Best Pick) -->
+<article class="bg-surface-container-lowest rounded-xl p-space-md shadow-md flex flex-col gap-space-md relative overflow-hidden">
+<!-- Best Pick Top Banner -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="px-space-xs py-0.5 rounded bg-primary text-on-primary font-code-sm text-[11px] uppercase font-bold tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-tertiary-fixed" style="font-variation-settings: 'FILL' 1;">stars</span>
+            Best Pick
+          </span>
+<span class="font-label-md text-label-md text-on-surface-variant flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[14px]">directions_walk</span> 180m away
+          </span>
+</div>
+<!-- Live Queue Indicator -->
+<span class="px-space-sm py-1 rounded-full bg-tertiary-container text-tertiary-fixed font-code-sm text-[11px] font-bold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary-fixed"></span>
+          2 jobs ahead (~5 min wait)
+        </span>
+</div>
+<!-- Shop Visual & Identity Summary -->
+<div class="flex gap-space-md items-start">
+<div class="w-20 h-20 rounded-xl overflow-hidden bg-surface-container flex-shrink-0 relative shadow-sm">
+<img class="w-full h-full object-cover" data-alt="Bustling Dadar station xerox shop counter with modern heavy duty digital copiers, organized document racks, neat signage, clean commercial printing shop aesthetic in Mumbai." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_a0bdee91Xk3n2AI1xsa2DJUxgAH13BiuL6KZXOjDxu-e4Y6BZzDesdF8hff2nVYCj8MWHC0Wb1YuIEK1awWMbxWYvDI610a8RAAm1SvxbKYNAIzGJmMf1Hm7xnnFMkc4QQG_AjegnuMkx5KCm7WV7lpKjQqft1PZgeVSsizneFTCiWRBgugXWouX3td5ZuS5YmbrN1O4uyloPGHmnnpQCSWjoBfBAZEjyn3WH_qDP_2nmYfoYfePtg"/>
+<span class="absolute bottom-1 right-1 bg-primary/80 backdrop-blur-sm text-on-primary text-[10px] px-1 rounded font-code-sm">C-01</span>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-sm text-headline-sm text-on-surface truncate">Imran Xerox &amp; Cyber Centre</h3>
+</div>
+<div class="flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[14px] text-on-tertiary-container" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">4.8</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">(340 reviews)</span>
+<span class="text-on-surface-variant text-[10px]">•</span>
+<span class="font-label-md text-label-md text-secondary">Plat 1 West Gate</span>
+</div>
+<!-- Price Ledger Box -->
+<div class="mt-space-xs flex items-center gap-space-md py-1 px-space-xs rounded bg-surface-container-low">
+<div class="flex items-baseline gap-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">B/W:</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">₹2<span class="text-[10px] font-normal text-on-surface-variant">/side</span></span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Color:</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">₹10<span class="text-[10px] font-normal text-on-surface-variant">/side</span></span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Both sides:</span>
+<span class="font-label-md text-label-md text-on-tertiary-container font-bold">₹3</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Feature Tags -->
+<div class="flex flex-wrap items-center gap-space-xs">
+<span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface font-code-sm text-[11px] font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-secondary">account_balance_wallet</span> UPI Prepay
+        </span>
+<span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface font-code-sm text-[11px] font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-secondary">menu_book</span> Spiral Binding
+        </span>
+<span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface font-code-sm text-[11px] font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-secondary">speed</span>Open · closes 9:30 pm</span>
+</div>
+<!-- Action Footer -->
+<div class="flex items-center gap-space-sm pt-space-xs">
+<button aria-label="Directions to Imran Xerox" class="w-12 h-12 flex items-center justify-center rounded-xl bg-surface-container text-on-surface-variant active:bg-surface-container-high transition-colors flex-shrink-0" type="button">
+<span class="material-symbols-outlined text-[20px]">near_me</span>
+</button>
+<button class="flex-1 min-h-[52px] px-space-lg rounded-xl bg-secondary text-on-secondary font-label-lg text-label-lg flex items-center justify-center gap-2 active:bg-secondary-container transition-transform active:scale-[0.98] shadow-sm" type="button">
+<span>Order Ahead</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</article>
+<!-- Shop Card 2: Sai Digital Prints & Stationers -->
+<article class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-md relative">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[14px]">directions_walk</span> 240m away
+          </span>
+<span class="text-on-surface-variant text-[10px]">•</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Kabutarkhana Lane</span>
+</div>
+<span class="px-space-sm py-1 rounded-full bg-surface-container-high text-on-surface font-code-sm text-[11px] font-medium flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+          4 jobs ahead (~9 min wait)
+        </span>
+</div>
+<div class="flex gap-space-md items-start">
+<div class="w-20 h-20 rounded-xl overflow-hidden bg-surface-container flex-shrink-0 relative shadow-sm">
+<img class="w-full h-full object-cover" data-alt="Stationery shop storefront with high speed digital printer setup, glossy display cases, blue branding signs, situated in bustling Mumbai market corridor." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3fz3XVFI3RectAFSisdrWhBfCN_aJUm-GHQRCn2mj2Kcj_HKAnL5JtGOXXxbMRC40-qweds3iHdx8uxJuU2aA7EdF26Sj8fJkqT5anuvyIZqlL9esF1TS5ryqgHP6fve_mVbPFfEw4p2jO20PKD8Doiw8hpMHrfzQTYgSpW4rMEyctLAfVrOVARW1OjbUzfWlk0QqtA_C5vKNZv0QfRnY3vmaS1R_2_CLt-2pu3I5BQbjGvTRCX_naA"/>
+<span class="absolute bottom-1 right-1 bg-primary/80 backdrop-blur-sm text-on-primary text-[10px] px-1 rounded font-code-sm">C-04</span>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface truncate">Sai Digital Prints &amp; Stationers</h3>
+<div class="flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[14px] text-on-tertiary-container" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">4.6</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">(180 reviews)</span>
+</div>
+<div class="mt-space-xs flex items-center gap-space-md py-1 px-space-xs rounded bg-surface-container-low">
+<div class="flex items-baseline gap-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">B/W:</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">₹2<span class="text-[10px] font-normal text-on-surface-variant">/side</span></span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Color:</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">₹8<span class="text-[10px] font-normal text-on-surface-variant">/side</span></span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-wrap items-center gap-space-xs">
+<span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface font-code-sm text-[11px] font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-secondary">security</span>Scanning</span>
+<span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface font-code-sm text-[11px] font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-secondary">layers</span> Lamination
+        </span>
+<span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface font-code-sm text-[11px] font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-secondary">picture_as_pdf</span>Photo prints</span>
+</div>
+<div class="flex items-center gap-space-sm pt-space-xs">
+<button aria-label="Directions to Sai Digital Prints" class="w-12 h-12 flex items-center justify-center rounded-xl bg-surface-container text-on-surface-variant active:bg-surface-container-high transition-colors flex-shrink-0" type="button">
+<span class="material-symbols-outlined text-[20px]">near_me</span>
+</button>
+<button class="flex-1 min-h-[52px] px-space-lg rounded-xl bg-secondary text-on-secondary font-label-lg text-label-lg flex items-center justify-center gap-2 active:bg-secondary-container transition-transform active:scale-[0.98] shadow-sm" type="button">
+<span>Order Ahead</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</article>
+<!-- Shop Card 3: Mahalaxmi Xerox Point -->
+<article class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-md relative">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[14px]">directions_walk</span> 410m away
+          </span>
+<span class="text-on-surface-variant text-[10px]">•</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Station Rd Corner</span>
+</div>
+<!-- High Queue Busy Alert -->
+<span class="px-space-sm py-1 rounded-full bg-error-container text-on-error-container font-code-sm text-[11px] font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">schedule</span>
+          11 jobs ahead (~22 min wait · Busy)
+        </span>
+</div>
+<div class="flex gap-space-md items-start">
+<div class="w-20 h-20 rounded-xl overflow-hidden bg-surface-container flex-shrink-0 relative shadow-sm">
+<img class="w-full h-full object-cover" data-alt="Traditional railway road print kiosk with high volume industrial printers, neat paper stacks, students queued up outside shop window in Dadar Mumbai." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB24NLYe-e192q5x9eRhciTgulz6fsb0WqFrvLMbDxIO5MRU2tDvX07HcSiBz2_wXUSUfI-fahscuOwXkOLUPok40gA5WK_8txxqCQAejh3DvenIKnymGA158Yyf3jIKZJYpnfpFokbzsLfbwqRix7vVRmiQx4DmwophgYOGwYJw5fmxZvuHyFowYMuZVenK_9UUV8nxA2H3mmsE5sqJb29qvcazKP-mEkAjmij3iNI4-tgbelS52Pypw"/>
+<span class="absolute bottom-1 right-1 bg-primary/80 backdrop-blur-sm text-on-primary text-[10px] px-1 rounded font-code-sm">C-09</span>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface truncate">Mahalaxmi Xerox Point</h3>
+<div class="flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[14px] text-on-tertiary-container" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">4.3</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">(492 reviews)</span>
+</div>
+<div class="mt-space-xs flex items-center gap-space-md py-1 px-space-xs rounded bg-surface-container-low">
+<div class="flex items-baseline gap-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">B/W:</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">₹1.5<span class="text-[10px] font-normal text-on-surface-variant">/side</span></span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Color:</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">₹7<span class="text-[10px] font-normal text-on-surface-variant">/side</span></span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-label-md text-label-md text-secondary font-bold">Bulk Discount</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-wrap items-center gap-space-xs">
+<span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface font-code-sm text-[11px] font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-secondary">request_quote</span> Bulk Rates (100+ pgs)
+        </span>
+<span class="px-space-xs py-0.5 rounded bg-surface-container text-on-surface font-code-sm text-[11px] font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-secondary">inventory_2</span> Project Hard Binding
+        </span>
+</div>
+<div class="flex items-center gap-space-sm pt-space-xs">
+<button aria-label="Directions to Mahalaxmi Xerox" class="w-12 h-12 flex items-center justify-center rounded-xl bg-surface-container text-on-surface-variant active:bg-surface-container-high transition-colors flex-shrink-0" type="button">
+<span class="material-symbols-outlined text-[20px]">near_me</span>
+</button>
+<button class="flex-1 min-h-[52px] px-space-lg rounded-xl bg-secondary text-on-secondary font-label-lg text-label-lg flex items-center justify-center gap-2 active:bg-secondary-container transition-transform active:scale-[0.98] shadow-sm" type="button">
+<span>Order Ahead</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</article>
+</main>
+</div>
+<script>
+  // Simple micro-interactions for station zone selection and pill toggle
+  document.querySelectorAll('.zone-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.zone-pill').forEach(p => {
+        p.classList.remove('bg-primary', 'text-on-primary', 'shadow-sm');
+        p.classList.add('bg-surface-container', 'text-on-surface');
+        p.setAttribute('aria-selected', 'false');
+      });
+      btn.classList.remove('bg-surface-container', 'text-on-surface');
+      btn.classList.add('bg-primary', 'text-on-primary', 'shadow-sm');
+      btn.setAttribute('aria-selected', 'true');
+    });
+  });
+
+  document.querySelectorAll('.filter-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const isSelected = pill.classList.contains('bg-secondary');
+      if (isSelected) {
+        pill.classList.remove('bg-secondary', 'text-on-secondary');
+        pill.classList.add('bg-surface-container', 'text-on-surface');
+      } else {
+        pill.classList.remove('bg-surface-container', 'text-on-surface');
+        pill.classList.add('bg-secondary', 'text-on-secondary');
+      }
+    });
+  });
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-2px_12px_rgba(0,0,0,0.06)]" data-active-classes="text-secondary"><div class="flex justify-around items-center h-16 px-gutter max-w-md mx-auto"><a aria-current="page" class="flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[48px] transition-colors text-secondary" data-path="print-nearby" href="#"><span class="material-symbols-outlined text-[24px]">near_me</span><span class="font-label-md text-label-md">Print Nearby</span></a><a class="flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[48px] -mt-4 text-on-secondary bg-secondary-container rounded-xl w-14 h-14 shadow-[0_4px_12px_rgba(0,81,213,0.35)] transition-transform active:scale-95" data-path="scan-qr" href="#"><span class="material-symbols-outlined text-[28px]">qr_code_scanner</span><span class="sr-only">Scan QR</span></a><a class="flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[48px] text-on-surface-variant transition-colors" data-path="my-jobs-and-tokens" href="#"><span class="material-symbols-outlined text-[24px]">confirmation_number</span><span class="font-label-md text-label-md">My jobs</span></a></div></nav></body></html>

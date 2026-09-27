@@ -1,0 +1,23 @@
+# Changes from the Stitch export (live_token_deletion_tracker)
+
+- removed icon button "person" — walk-in has no login
+- added "मरा" next to "हिं" — all three languages
+- text: "Token Dispense View" → "Your ticket" (1x)
+- text: "Lane A · Pick-up Bay 2" → "Lane A · B/W" (1x)
+- text: "4 jobs completed ahead of you" → "1 job ahead of you" (1x)
+- text: "Bay A" → "Soon" (1x)
+- text: "Counter Lane A · Platform 1 Exit Corridor, Dadar West" → "Dadar Station West, Platform 1 Exit" (1x)
+- removed block with "Operator Desk" + "Order Contact" — walk-in never collects a phone number; no staff names
+- text: "Recipient: Priya" → "Name: Priya" (1x)
+- text: "B/W Duplex" → "B/W both sides" (2x)
+- text: "₹18.00" → "₹24.00" (1x)
+- text: "₹12.00" → "₹18.00" (1x)
+- text: "DPDP 2023 Digital Deletion Receipt" → "Deletion receipt" (1x)
+- removed "VERIFIED" (+0 up) — no legal-compliance badges we cannot certify
+- text: "Auto-Purge Countdown" → "Deleted 10 min after pickup" (1x)
+- text: "All digital artifacts purge automatically 10:00 mins after counter collection is scanned. Memory caches clear to Zero Bytes permanently." → "After you collect, your files are deleted from Counter Drop within 10 minutes. This card will show the exact time." (1x)
+- removed section "Trust Audit Specs" — claims about shop PCs and spoolers we cannot guarantee
+- replaced section "Secondary Safe Action Buttons (Before Claimed)" — Edit/Cancel only before claim (BR-Q3)
+- text: "Order ahead on your train commute & skip the counter queue entirely." → "Scan faster next time and keep your tickets in one place." (1x)
+- text: "Urgent issue? Ask for Operator Imran at Counter Lane A" → "Need help? Ask at the counter and show token A-07." (1x)
+- brand image → inline Counter Drop logo

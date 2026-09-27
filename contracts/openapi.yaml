@@ -1,0 +1,115 @@
+openapi: 3.1.0
+info:
+  title: Counter Drop API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: Service is healthy
+  /api/v1/cd/shops/{slug}:
+    get:
+      summary: Get public shop information
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Shop found
+        "404":
+          description: Shop not found
+  /api/v1/cd/shops/{slug}/jobs:
+    post:
+      summary: Create a customer print job
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Job created
+        "400":
+          description: Invalid request
+  /api/v1/cd/jobs/{id}:
+    get:
+      summary: Get customer job status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: secret
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Job found
+        "403":
+          description: Invalid job secret
+  /api/v1/cd/jobs/{id}/submit:
+    post:
+      summary: Submit a job after direct file uploads finish
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: secret
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Job submitted
+        "403":
+          description: Invalid job secret
+  /api/v1/cd/shop/queue:
+    get:
+      summary: Get the shop queue
+      parameters:
+        - name: shop
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Queue snapshot
+        "400":
+          description: Missing shop query parameter
+        "404":
+          description: Shop not found
+  /api/v1/cd/shop/jobs/{id}/{action}:
+    post:
+      summary: Apply a staff action to a job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: action
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [claim, ready, collected, cancel, release]
+      responses:
+        "200":
+          description: Job updated
+        "409":
+          description: Invalid state transition

@@ -1,0 +1,80 @@
+# ---------------------------------------------------------------
+# Counter Drop — .gitignore
+# ---------------------------------------------------------------
+
+# Secrets and local environment (never commit)
+.env
+.env.*
+!.env.example
+deploy/.env
+deploy/prod/.env
+deploy/**/.env
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+service-account*.json
+
+# Go
+/api/bin/
+/agent/bin/
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.*
+*.coverprofile
+go.work.local
+vendor/
+
+# Node / web (web/ is scaffolded in build-plan step 15)
+node_modules/
+.pnpm-store/
+web/dist/
+web/dev-dist/
+web/.vite/
+web/coverage/
+web/playwright-report/
+web/test-results/
+web/blob-report/
+e2e/playwright-report/
+e2e/test-results/
+.eslintcache
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local data from docker compose / tools
+.data/
+tmp/
+*.sqlite
+*.db
+*.dump
+*.sql.gz
+
+# Logs
+*.log
+logs/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+*~
+
+# Claude / agent scratch (keep CLAUDE.md if you add one)
+.claude/settings.local.json

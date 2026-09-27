@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&amp;family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {"darkMode":"class","theme":{"extend":{"colors":{"on-surface":"#0b1c30","on-primary":"#ffffff","on-surface-variant":"#45464d","tertiary-fixed":"#95f8a7","outline-variant":"#c6c6cd","surface-bright":"#f8f9ff","outline":"#76777d","on-error":"#ffffff","on-error-container":"#93000a","inverse-on-surface":"#eaf1ff","on-tertiary-fixed":"#00210a","surface-container-lowest":"#ffffff","surface-container-highest":"#d3e4fe","inverse-surface":"#213145","surface-variant":"#d3e4fe","surface-container-high":"#dce9ff","secondary-container":"#316bf3","on-secondary-container":"#fefcff","inverse-primary":"#bec6e0","on-secondary-fixed":"#00174b","on-primary-fixed":"#131b2e","error":"#ba1a1a","on-secondary":"#ffffff","background":"#f8f9ff","on-tertiary":"#ffffff","tertiary-container":"#00210a","surface-tint":"#565e74","on-secondary-fixed-variant":"#003ea8","tertiary":"#000000","primary-fixed":"#dae2fd","primary-container":"#131b2e","surface-dim":"#cbdbf5","on-background":"#0b1c30","surface-container":"#e5eeff","on-primary-fixed-variant":"#3f465c","tertiary-fixed-dim":"#79db8d","secondary-fixed-dim":"#b4c5ff","surface":"#f8f9ff","primary-fixed-dim":"#bec6e0","on-tertiary-fixed-variant":"#005323","secondary-fixed":"#dbe1ff","on-tertiary-container":"#339650","secondary":"#0051d5","surface-container-low":"#eff4ff","on-primary-container":"#7c839b","primary":"#000000","error-container":"#ffdad6"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"space-md":"1rem","margin":"1rem","space-lg":"1.5rem","space-xs":"0.25rem","space-sm":"0.5rem","gutter":"1rem","space-xl":"2.5rem"},"fontFamily":{"headline-sm":["Noto Sans"],"headline-lg":["Noto Sans"],"headline-xl-mobile":["Noto Sans"],"body-sm":["Noto Sans"],"code-sm":["JetBrains Mono"],"headline-xl":["Noto Sans"],"token-display-mobile":["JetBrains Mono"],"label-lg":["Noto Sans"],"headline-md":["Noto Sans"],"label-md":["Noto Sans"],"body-lg":["Noto Sans"],"token-display":["JetBrains Mono"],"body-md":["Noto Sans"]},"fontSize":{"headline-sm":["18px",{"lineHeight":"24px","fontWeight":"600"}],"headline-lg":["24px",{"lineHeight":"32px","fontWeight":"700"}],"headline-xl-mobile":["28px",{"lineHeight":"36px","letterSpacing":"-0.01em","fontWeight":"700"}],"body-sm":["12px",{"lineHeight":"16px","fontWeight":"400"}],"code-sm":["12px",{"lineHeight":"16px","fontWeight":"500"}],"headline-xl":["36px",{"lineHeight":"44px","letterSpacing":"-0.02em","fontWeight":"700"}],"token-display-mobile":["48px",{"lineHeight":"56px","letterSpacing":"-0.01em","fontWeight":"700"}],"label-lg":["14px",{"lineHeight":"20px","letterSpacing":"0.01em","fontWeight":"600"}],"headline-md":["20px",{"lineHeight":"28px","fontWeight":"600"}],"label-md":["12px",{"lineHeight":"16px","letterSpacing":"0.02em","fontWeight":"600"}],"body-lg":["16px",{"lineHeight":"24px","fontWeight":"500"}],"token-display":["64px",{"lineHeight":"72px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}]}}}};</script></head><body class="bg-background text-on-surface font-body-md text-body-md min-h-screen"><header class="fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest border-b-2 border-outline"><div class="h-16 px-space-lg flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-sm pr-space-md border-r-2 border-outline-variant"><div class="w-8 h-8 bg-primary text-on-primary flex items-center justify-center font-code-sm text-code-sm font-bold rounded">CD</div><span class="font-headline-sm text-headline-sm tracking-tight text-on-surface uppercase">Counter Drop</span></div><div class="flex items-center gap-space-xs bg-surface-container-low px-space-sm py-1.5 border border-outline-variant"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">storefront</span><span class="font-label-lg text-label-lg font-bold text-on-surface">Imran Xerox &amp; Digital Print - Dadar West</span><span class="material-symbols-outlined text-[18px] text-on-surface-variant">arrow_drop_down</span></div><div class="hidden xl:flex items-center gap-space-xs bg-surface-container-lowest px-space-sm py-1 border-2 border-on-tertiary-container"><span class="w-2.5 h-2.5 bg-on-tertiary-container rounded-full"></span><span class="font-code-sm text-code-sm font-bold text-on-tertiary-container tracking-wider uppercase">Terminal D-01 • Audio System Connected</span></div></div><nav class="hidden lg:flex items-center gap-1" data-active-classes="bg-primary text-on-primary font-label-lg text-label-lg"><a class="px-space-md py-2 font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-none" data-path="live-queue" href="#">Live Queue</a><a class="px-space-md py-2 font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-none" data-path="tv-display" href="#">TV Display</a><a class="px-space-md py-2 font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-none" data-path="audio-chime-manager" href="#">Audio &amp; Chime Manager</a><a class="px-space-md py-2 font-label-lg text-label-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-none" data-path="settings" href="#">Settings</a></nav><div class="flex items-center gap-space-sm"><button class="h-10 px-space-md bg-secondary text-on-secondary font-label-lg text-label-lg flex items-center gap-space-xs border border-secondary hover:bg-on-secondary-fixed-variant active:bg-on-secondary-fixed transition-none" type="button"><span class="material-symbols-outlined text-[18px]">volume_up</span><span class="font-bold uppercase tracking-wider">Master Chime Test</span></button><div class="flex items-center gap-1.5 px-space-sm h-10 bg-surface-container border border-outline-variant"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">volume_mute</span><div class="flex gap-0.5"><div class="w-1.5 h-3 bg-secondary"></div><div class="w-1.5 h-3 bg-secondary"></div><div class="w-1.5 h-3 bg-secondary"></div><div class="w-1.5 h-3 bg-secondary"></div><div class="w-1.5 h-3 bg-outline-variant"></div></div><span class="font-code-sm text-code-sm font-bold text-on-surface pl-1">80%</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-16 bg-background min-h-screen"><div class="flex flex-col w-full">
+<!-- Top Operational Banner & Control Deck -->
+<div class="w-full bg-surface-container-lowest border-b-2 border-outline px-space-lg py-space-md shadow-sm">
+<div class="max-w-7xl mx-auto flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-space-md">
+<!-- Left: Node Status & Signal Metrics -->
+<div class="flex flex-wrap items-center gap-space-md">
+<div class="flex items-center gap-space-sm bg-surface-container px-space-sm py-1.5 border border-outline">
+<span class="w-3 h-3 bg-[#16A34A] rounded-full animate-pulse"></span>
+<div class="flex flex-col">
+<span class="font-code-sm text-code-sm font-bold text-on-surface uppercase tracking-wide">Audio Node Active • PA SPK-01</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Loudness 84 dB SPL • Dadar Concourse Calibrated</span>
+</div>
+</div>
+<div class="hidden sm:flex items-center gap-space-sm px-space-sm py-1.5 bg-surface-container-low border border-outline-variant">
+<span class="material-symbols-outlined text-[18px] text-secondary">translate</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-bold">Multilingual Engine v4.2</span>
+<span class="font-code-sm text-code-sm text-on-surface-variant">ENG (IN) • MAR (मराठी) • HIN (हिंदी)</span>
+</div>
+</div>
+<div class="flex items-center gap-2 bg-[#D97706]/10 px-space-sm py-1.5 border border-[#D97706]/40">
+<span class="material-symbols-outlined text-[18px] text-[#D97706]">bolt</span>
+<span class="font-code-sm text-code-sm font-bold text-[#D97706] uppercase">Peak Mode: 30s Loop Enabled</span>
+</div>
+</div>
+<!-- Right: Master Volume Slider, Quick Chime & Daemon Toggles -->
+<div class="flex flex-wrap items-center gap-space-md">
+<!-- Master PA Gain -->
+<div class="flex items-center gap-space-sm bg-surface-container px-space-md py-1 border border-outline">
+<button class="text-on-surface hover:text-error flex items-center" id="masterMuteBtn" title="Toggle Mute" type="button">
+<span class="material-symbols-outlined text-[20px]" id="masterMuteIcon">volume_up</span>
+</button>
+<div class="flex flex-col">
+<div class="flex justify-between items-center w-28">
+<span class="font-code-sm text-[10px] text-on-surface-variant uppercase font-bold">PA Gain</span>
+<span class="font-code-sm text-code-sm font-bold text-on-surface" id="masterVolVal">82%</span>
+</div>
+<input class="w-28 h-1.5 bg-outline-variant accent-secondary cursor-pointer" id="masterVolSlider" max="100" min="0" type="range" value="82"/>
+</div>
+</div>
+<!-- Automation Switch -->
+<div class="flex items-center gap-2 bg-surface-container-low px-space-sm py-1.5 border border-outline-variant">
+<span class="font-label-md text-label-md text-on-surface font-bold">Announce Ready</span>
+<button aria-pressed="true" class="w-11 h-6 bg-[#16A34A] rounded-full p-0.5 flex items-center transition-none justify-end" id="autoToggleBtn" type="button">
+<div class="w-5 h-5 bg-on-primary rounded-full shadow-sm"></div>
+</button>
+</div>
+<!-- Master Test Button -->
+<button class="h-11 px-space-md bg-secondary text-on-secondary font-label-lg text-label-lg font-bold uppercase tracking-wider flex items-center gap-space-xs border-2 border-[#0051d5] hover:bg-[#003ea8] active:translate-y-0.5" id="masterTestBtn" type="button">
+<span class="material-symbols-outlined text-[20px]">graphic_eq</span>
+<span>Test Chime Now</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Main Split Canvas: Left Config (40%) & Right Activity Feed (60%) -->
+<div class="max-w-7xl mx-auto w-full px-space-lg py-space-lg grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+<!-- ======================================================== -->
+<!-- LEFT COLUMN: Sound Synthesizer & Hardware Preset Control -->
+<!-- ======================================================== -->
+<div class="lg:col-span-5 flex flex-col gap-space-lg">
+<!-- Module 1: Chime Tone & Voice Profile Synthesizer -->
+<section class="bg-surface-container-lowest border-2 border-outline p-space-md shadow-sm">
+<div class="flex items-center justify-between pb-space-sm border-b border-outline-variant mb-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[22px]">music_note</span>
+<h2 class="font-headline-sm text-headline-sm uppercase text-on-surface">1. Chime &amp; Synthesizer Profile</h2>
+</div>
+<span class="font-code-sm text-code-sm bg-surface-container px-2 py-0.5 text-on-surface font-bold border border-outline-variant">PRESET: RLY-01</span>
+</div>
+<!-- Chime Style Radios -->
+<div class="space-y-space-xs mb-space-md">
+<label class="block font-label-md text-label-md text-on-surface-variant uppercase font-bold mb-1">Acoustic Chime Jingle</label>
+<label class="flex items-center justify-between p-2.5 bg-surface-container-high border-2 border-secondary cursor-pointer">
+<div class="flex items-center gap-space-sm">
+<input checked="" class="w-4 h-4 text-secondary accent-secondary" name="chime_tone" type="radio" value="dual_tone"/>
+<div>
+<p class="font-label-lg text-label-lg font-bold text-on-surface">Dual-Tone Railway Style (High-Pitch)</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">B4 - E5 harmonic bell • High ambient penetration</p>
+</div>
+</div>
+<button class="p-1 hover:bg-surface-container-lowest text-secondary" onclick="playAudioSnippet('railway')" title="Preview Tone" type="button">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+</button>
+</label>
+<label class="flex items-center justify-between p-2.5 bg-surface-container-lowest border border-outline-variant hover:border-outline cursor-pointer">
+<div class="flex items-center gap-space-sm">
+<input class="w-4 h-4 text-secondary accent-secondary" name="chime_tone" type="radio" value="mellow"/>
+<div>
+<p class="font-label-lg text-label-lg font-bold text-on-surface">Mellow Ding-Dong (Retail Standard)</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Warm acoustic bell for indoor compact desks</p>
+</div>
+</div>
+<button class="p-1 hover:bg-surface-container text-on-surface-variant" onclick="playAudioSnippet('mellow')" title="Preview Tone" type="button">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+</button>
+</label>
+<label class="flex items-center justify-between p-2.5 bg-surface-container-lowest border border-outline-variant hover:border-outline cursor-pointer">
+<div class="flex items-center gap-space-sm">
+<input class="w-4 h-4 text-secondary accent-secondary" name="chime_tone" type="radio" value="buzzer"/>
+<div>
+<p class="font-label-lg text-label-lg font-bold text-on-surface">Classic Counter Buzzer</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Instant electric prompt 440Hz punch</p>
+</div>
+</div>
+<button class="p-1 hover:bg-surface-container text-on-surface-variant" onclick="playAudioSnippet('buzzer')" title="Preview Tone" type="button">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+</button>
+</label>
+<label class="flex items-center justify-between p-2.5 bg-surface-container-lowest border border-outline-variant hover:border-outline cursor-pointer">
+<div class="flex items-center gap-space-sm">
+<input class="w-4 h-4 text-secondary accent-secondary" name="chime_tone" type="radio" value="beep"/>
+<div>
+<p class="font-label-lg text-label-lg font-bold text-on-surface">Minimalist Electronic Pip</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Non-intrusive short sine pulse (120ms)</p>
+</div>
+</div>
+<button class="p-1 hover:bg-surface-container text-on-surface-variant" onclick="playAudioSnippet('beep')" title="Preview Tone" type="button">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+</button>
+</label>
+</div>
+<!-- Voice Synthesizer Selection -->
+<div class="space-y-space-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant uppercase font-bold mb-1">Synthesizer Voice Model</label>
+<div class="grid grid-cols-2 gap-space-sm">
+<label class="p-space-sm bg-surface-container-high border-2 border-secondary flex flex-col gap-1 cursor-pointer">
+<div class="flex items-center justify-between">
+<span class="font-label-lg text-label-lg font-bold text-on-surface">Prerna (Clear)</span>
+<input checked="" class="accent-secondary" name="voice_model" type="radio" value="prerna"/>
+</div>
+<span class="font-code-sm text-[11px] text-on-surface-variant">Female • Hi-articulation</span>
+<span class="font-body-sm text-body-sm text-secondary font-bold">Optimized for Hindi &amp; Eng</span>
+</label>
+<label class="p-space-sm bg-surface-container-lowest border border-outline-variant flex flex-col gap-1 cursor-pointer hover:border-outline">
+<div class="flex items-center justify-between">
+<span class="font-label-lg text-label-lg font-bold text-on-surface">Sanjay (Direct)</span>
+<input class="accent-secondary" name="voice_model" type="radio" value="sanjay"/>
+</div>
+<span class="font-code-sm text-[11px] text-on-surface-variant">Male • Deep projection</span>
+<span class="font-body-sm text-body-sm text-on-surface font-bold">Native Marathi Dialect</span>
+</label>
+</div>
+</div>
+</section>
+<!-- Module 2: Template Builder & Multilingual Sequence -->
+<section class="bg-surface-container-lowest border-2 border-outline p-space-md shadow-sm">
+<div class="flex items-center justify-between pb-space-sm border-b border-outline-variant mb-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[22px]">record_voice_over</span>
+<h2 class="font-headline-sm text-headline-sm uppercase text-on-surface">2. Speech Template &amp; Tokens</h2>
+</div>
+<span class="font-code-sm text-code-sm bg-surface-container-low px-2 py-0.5 border border-outline-variant text-on-surface">ISO 639-3</span>
+</div>
+<div class="space-y-space-md">
+<div>
+<div class="flex items-center justify-between mb-1">
+<label class="font-label-md text-label-md text-on-surface-variant uppercase font-bold">Template Schema</label>
+<span class="font-code-sm text-[11px] text-secondary font-bold">VARIABLE MAPPING ACTIVE</span>
+</div>
+<div class="bg-surface-container-low p-space-sm border border-outline font-code-sm text-code-sm text-on-surface leading-relaxed">
+<span class="bg-secondary text-on-secondary px-1 py-0.5 font-bold">[CHIME]</span> Token <span class="bg-surface-container-highest px-1 py-0.5 font-bold text-secondary">{TOKEN_ID}</span>, <span class="bg-surface-container-highest px-1 py-0.5 font-bold text-on-surface">{CUSTOMER_NAME}</span>, Counter <span class="bg-surface-container-highest px-1 py-0.5 font-bold text-on-surface">{DESK_NO}</span>, Tray <span class="bg-surface-container-highest px-1 py-0.5 font-bold text-on-surface">{TRAY_ID}</span> ready for collection.
+            </div>
+</div>
+<!-- Broadcast Language Sequence -->
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant uppercase font-bold mb-1">Station Language Order</label>
+<div class="grid grid-cols-2 gap-space-sm">
+<button class="p-2 bg-secondary text-on-secondary border-2 border-secondary font-label-md text-label-md font-bold text-left flex items-center justify-between" type="button">
+<span>1st English ➔ 2nd Marathi</span>
+<span class="material-symbols-outlined text-[18px]">check</span>
+</button>
+<button class="p-2 bg-surface-container-lowest text-on-surface border border-outline hover:border-secondary font-label-md text-label-md font-bold text-left flex items-center justify-between" type="button">
+<span>1st English ➔ 2nd Hindi</span>
+<span class="material-symbols-outlined text-[18px] text-transparent">check</span>
+</button>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1.5 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">info</span>
+              Mumbai Urban Commuter Standard: Western Railway recommends English + Marathi.
+            </p>
+</div>
+<!-- Repeat Count Rule -->
+<div class="pt-space-xs border-t border-outline-variant">
+<div class="flex items-center justify-between mb-space-xs">
+<span class="font-label-md text-label-md text-on-surface font-bold">Repeat Frequency Rules</span>
+<span class="font-code-sm text-code-sm text-on-tertiary-container font-bold">AUTO-THROTTLE ACTIVE</span>
+</div>
+<div class="grid grid-cols-2 gap-space-sm text-left">
+<div class="p-2 bg-surface-container-low border border-outline-variant">
+<span class="font-code-sm text-[11px] text-on-surface-variant uppercase block">Remote Web Orders</span>
+<span class="font-label-lg text-label-lg font-bold text-on-surface">2 Times (60s delay)</span>
+</div>
+<div class="p-2 bg-surface-container-low border border-outline-variant">
+<span class="font-code-sm text-[11px] text-on-surface-variant uppercase block">Physical Walk-ins</span>
+<span class="font-label-lg text-label-lg font-bold text-on-surface">1 Time Instant</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Module 3: Hardware Output Routing & Rush Hour Boost -->
+<section class="bg-surface-container-lowest border-2 border-outline p-space-md shadow-sm">
+<div class="flex items-center justify-between pb-space-sm border-b border-outline-variant mb-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[22px]">router</span>
+<h2 class="font-headline-sm text-headline-sm uppercase text-on-surface">3. Hardware Speaker Routing</h2>
+</div>
+<span class="font-code-sm text-code-sm text-on-surface-variant font-bold">3 ENDPOINTS</span>
+</div>
+<div class="space-y-space-sm mb-space-md">
+<!-- Route 1: TV HDMI -->
+<div class="flex items-center justify-between p-2.5 bg-surface-container-lowest border-2 border-outline">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-on-surface text-[20px]">tv</span>
+<div>
+<p class="font-label-lg text-label-lg font-bold text-on-surface">TV Overhead Display (HDMI ARC)</p>
+<p class="font-code-sm text-[11px] text-on-surface-variant">SONY BRAVIA 55" • Ceiling Mount #1</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-code-sm text-code-sm text-[#16A34A] font-bold">ONLINE</span>
+<input checked="" class="w-5 h-5 accent-secondary" type="checkbox"/>
+</div>
+</div>
+<!-- Route 2: Counter USB -->
+<div class="flex items-center justify-between p-2.5 bg-surface-container-lowest border-2 border-outline">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-on-surface text-[20px]">speaker</span>
+<div>
+<p class="font-label-lg text-label-lg font-bold text-on-surface">Counter 1 &amp; 2 PA Speaker (USB-Audio)</p>
+<p class="font-code-sm text-[11px] text-on-surface-variant">JBL Pro Soundbar • 48kHz Direct Bus</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-code-sm text-code-sm text-[#16A34A] font-bold">ONLINE</span>
+<input checked="" class="w-5 h-5 accent-secondary" type="checkbox"/>
+</div>
+</div>
+<!-- Route 3: Bluetooth Exterior Horn -->
+<div class="flex items-center justify-between p-2.5 bg-surface-container-low border border-outline-variant opacity-80">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">campaign</span>
+<div>
+<p class="font-label-lg text-label-lg font-bold text-on-surface">Exterior Corridor Horn (BT 5.2)</p>
+<p class="font-code-sm text-[11px] text-on-surface-variant">Street Platform Entry • Sync Ready</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-code-sm text-code-sm text-on-surface-variant font-bold">STANDBY</span>
+<input class="w-5 h-5 accent-secondary" type="checkbox"/>
+</div>
+</div>
+</div>
+<!-- Rush Hour DB Boost Config -->
+<div class="p-space-sm bg-surface-container border border-outline">
+<div class="flex items-center justify-between mb-1">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[#D97706] text-[18px]">volume_up</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">Dadar Rush Hour Boost (+15dB)</span>
+</div>
+<span class="font-code-sm text-code-sm font-bold text-on-surface">08:00 - 11:30 | 17:00 - 20:30</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            Automatically overrides master volume to 95% when train frequencies spike platform ambient sound levels over 78dB.
+          </p>
+</div>
+</section>
+<!-- Module 4: Live Simulation Box -->
+<section class="bg-surface-container-high border-2 border-outline p-space-md shadow-sm">
+<div class="flex items-center justify-between pb-space-xs border-b border-outline-variant mb-space-sm">
+<span class="font-label-md text-label-md text-on-surface font-bold uppercase tracking-wider">Simulate Queue Broadcast</span>
+<span class="font-code-sm text-[11px] text-secondary font-bold">SANDBOX DISPATCH</span>
+</div>
+<div class="flex items-center gap-space-sm">
+<div class="w-32">
+<input class="w-full h-11 px-space-sm bg-surface-container-lowest border-2 border-outline font-token-display-mobile text-[22px] leading-tight font-bold text-on-surface text-center uppercase focus:border-secondary focus:outline-none" id="simTokenInput" placeholder="Token" type="text" value="A-07"/>
+</div>
+<div class="flex-1">
+<button class="w-full h-11 bg-primary text-on-primary font-label-lg text-label-lg font-bold uppercase flex items-center justify-center gap-space-xs border-2 border-primary hover:bg-[#213145] active:translate-y-0.5" id="simBroadcastBtn" type="button">
+<span class="material-symbols-outlined text-[18px]">record_voice_over</span>
+<span>Simulate Broadcast</span>
+</button>
+</div>
+</div>
+<p class="font-code-sm text-[11px] text-on-surface-variant mt-2" id="simStatusMsg">Ready to test voice pipeline against selected speaker matrix.</p>
+</section>
+</div>
+<!-- ======================================================== -->
+<!-- RIGHT COLUMN: Realtime Audit Feed & Re-Announce Deck     -->
+<!-- ======================================================== -->
+<div class="lg:col-span-7 flex flex-col gap-space-lg">
+<!-- Realtime Audio Status & Quick Callout Triggers -->
+<div class="bg-surface-container-lowest border-2 border-outline p-space-md shadow-sm">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm pb-space-sm border-b border-outline-variant mb-space-md">
+<div>
+<h2 class="font-headline-sm text-headline-sm uppercase text-on-surface">Manual Public Address &amp; Quick-Page</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Instant one-tap broadcasts for station queue management</p>
+</div>
+<span class="font-code-sm text-code-sm bg-surface-container px-2.5 py-1 border border-outline font-bold text-on-surface">MIC READY (TX-01)</span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-space-sm">
+<button class="p-2.5 bg-surface-container-low border-2 border-outline hover:border-secondary hover:bg-surface-container text-left flex flex-col justify-between group active:bg-surface-container-high" onclick="triggerQuickPage('repeat_unresponsive')" type="button">
+<div class="flex items-center justify-between w-full mb-1">
+<span class="font-label-md text-label-md font-bold text-on-surface">Unresponsive Call</span>
+<span class="material-symbols-outlined text-[18px] text-secondary">sync_problem</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">"Please collect order at Counter Desk 1"</span>
+</button>
+<button class="p-2.5 bg-surface-container-low border-2 border-outline hover:border-secondary hover:bg-surface-container text-left flex flex-col justify-between group active:bg-surface-container-high" onclick="triggerQuickPage('open_desk_2')" type="button">
+<div class="flex items-center justify-between w-full mb-1">
+<span class="font-label-md text-label-md font-bold text-on-surface">Desk 2 Opened</span>
+<span class="material-symbols-outlined text-[18px] text-[#16A34A]">counter_2</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">"Token numbers above 20 proceed to Desk 2"</span>
+</button>
+<button class="p-2.5 bg-surface-container-low border-2 border-outline hover:border-secondary hover:bg-surface-container text-left flex flex-col justify-between group active:bg-surface-container-high" onclick="triggerQuickPage('shift_handover')" type="button">
+<div class="flex items-center justify-between w-full mb-1">
+<span class="font-label-md text-label-md font-bold text-on-surface">Pause 3-Min</span>
+<span class="material-symbols-outlined text-[18px] text-[#D97706]">pause_circle</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">"Paper refill pause. Next call in 3 mins"</span>
+</button>
+</div>
+</div>
+<!-- Live Broadcast Audit Feed Table -->
+<div class="bg-surface-container-lowest border-2 border-outline shadow-sm flex flex-col">
+<!-- Table Header & Filter Tabs -->
+<div class="p-space-md border-b-2 border-outline flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-secondary text-[24px]">view_timeline</span>
+<div>
+<h2 class="font-headline-sm text-headline-sm uppercase text-on-surface">Live Announcement Audit Feed</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Telemetry log of all synthesis and hardware audio alerts</p>
+</div>
+</div>
+<!-- Feed Filter Segmented Controls -->
+<div class="inline-flex border-2 border-outline p-0.5 bg-surface-container">
+<button class="px-space-sm py-1 font-label-md text-label-md font-bold bg-primary text-on-primary" id="filterAll" type="button">All (42)</button>
+<button class="px-space-sm py-1 font-label-md text-label-md font-bold text-on-surface hover:bg-surface-container-high" id="filterReady" type="button">Ready Alert</button>
+<button class="px-space-sm py-1 font-label-md text-label-md font-bold text-on-surface hover:bg-surface-container-high" id="filterManual" type="button">Paging</button>
+<button class="px-space-sm py-1 font-label-md text-label-md font-bold text-on-surface hover:bg-surface-container-high" id="filterRepeat" type="button">Repeats</button>
+</div>
+</div>
+<!-- Audit Table Container -->
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-high border-b-2 border-outline font-label-md text-label-md uppercase text-on-surface tracking-wider">
+<th class="py-2.5 px-space-md w-28">Time (IST)</th>
+<th class="py-2.5 px-space-md">Token / Customer</th>
+<th class="py-2.5 px-space-md">Trigger &amp; Target</th>
+<th class="py-2.5 px-space-md">Speakers &amp; Lang</th>
+<th class="py-2.5 px-space-md text-right">Action</th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md divide-y divide-outline-variant" id="auditTableBody">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low transition-none" data-type="ready">
+<td class="py-space-sm px-space-md font-code-sm text-code-sm font-bold text-on-surface whitespace-nowrap">
+                  07:39:11
+                  <span class="block text-[10px] text-on-surface-variant font-normal">T-042s ago</span>
+</td>
+<td class="py-space-sm px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-code-sm text-code-sm font-bold bg-surface-container-highest px-2 py-0.5 border border-secondary text-secondary">A-05</span>
+<div>
+<span class="font-label-lg text-label-lg font-bold text-on-surface block">Sunita P.</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Desk 1 • Tray 01 (3 Docs)</span>
+</div>
+</div>
+</td>
+<td class="py-space-sm px-space-md">
+<span class="inline-flex items-center gap-1 font-code-sm text-[11px] font-bold text-[#16A34A] bg-[#16A34A]/10 px-2 py-0.5 border border-[#16A34A]/30">
+<span class="w-1.5 h-1.5 bg-[#16A34A] rounded-full"></span>
+                    READY ALERT
+                  </span>
+<span class="block font-body-sm text-body-sm text-on-surface-variant mt-0.5">Operator marked printed</span>
+</td>
+<td class="py-space-sm px-space-md">
+<span class="font-label-md text-label-md text-on-surface font-semibold block">TV + Desk PA</span>
+<div class="flex items-center gap-1 mt-0.5 font-code-sm text-[11px] text-on-surface-variant">
+<span class="bg-surface-container px-1">ENG</span>
+<span>+</span>
+<span class="bg-surface-container px-1 font-bold text-on-surface">मराठी</span>
+<span class="text-on-surface-variant pl-1">• 4.2s (200 OK)</span>
+</div>
+</td>
+<td class="py-space-sm px-space-md text-right">
+<button class="h-9 px-3 bg-secondary text-on-secondary font-label-md text-label-md font-bold uppercase tracking-wider border border-secondary hover:bg-[#003ea8] inline-flex items-center gap-1" onclick="rebroadcastItem('A-05', 'Sunita P.', 'Desk 1, Tray 1')" type="button">
+<span class="material-symbols-outlined text-[16px]">replay</span>
+<span>Re-announce</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-none" data-type="ready">
+<td class="py-space-sm px-space-md font-code-sm text-code-sm font-bold text-on-surface whitespace-nowrap">
+                  07:34:02
+                  <span class="block text-[10px] text-on-surface-variant font-normal">T-5m ago</span>
+</td>
+<td class="py-space-sm px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-code-sm text-code-sm font-bold bg-surface-container-highest px-2 py-0.5 border border-secondary text-secondary">A-04</span>
+<div>
+<span class="font-label-lg text-label-lg font-bold text-on-surface block">Rajesh K.</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Desk 1 • Walk-in Fastprint</span>
+</div>
+</div>
+</td>
+<td class="py-space-sm px-space-md">
+<span class="inline-flex items-center gap-1 font-code-sm text-[11px] font-bold text-[#16A34A] bg-[#16A34A]/10 px-2 py-0.5 border border-[#16A34A]/30">
+<span class="w-1.5 h-1.5 bg-[#16A34A] rounded-full"></span>
+                    READY ALERT
+                  </span>
+<span class="block font-body-sm text-body-sm text-on-surface-variant mt-0.5">Express Pickup Slot</span>
+</td>
+<td class="py-space-sm px-space-md">
+<span class="font-label-md text-label-md text-on-surface font-semibold block">TV Screen 01</span>
+<div class="flex items-center gap-1 mt-0.5 font-code-sm text-[11px] text-on-surface-variant">
+<span class="bg-surface-container px-1">ENG ONLY</span>
+<span class="text-on-surface-variant pl-1">• 3.1s (200 OK)</span>
+</div>
+</td>
+<td class="py-space-sm px-space-md text-right">
+<button class="h-9 px-3 bg-surface-container-lowest text-on-surface font-label-md text-label-md font-bold uppercase tracking-wider border-2 border-outline hover:border-secondary hover:text-secondary inline-flex items-center gap-1" onclick="rebroadcastItem('A-04', 'Rajesh K.', 'Desk 1')" type="button">
+<span class="material-symbols-outlined text-[16px]">replay</span>
+<span>Re-announce</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low transition-none" data-type="repeat">
+<td class="py-space-sm px-space-md font-code-sm text-code-sm font-bold text-on-surface whitespace-nowrap">
+                  07:28:45
+                  <span class="block text-[10px] text-on-surface-variant font-normal">T-11m ago</span>
+</td>
+<td class="py-space-sm px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-code-sm text-code-sm font-bold bg-[#D97706]/15 px-2 py-0.5 border border-[#D97706] text-[#D97706]">#8819</span>
+<div>
+<span class="font-label-lg text-label-lg font-bold text-on-surface block">Vikram S.</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Desk 2 • Tray 03 (WhatsApp Drop)</span>
+</div>
+</div>
+</td>
+<td class="py-space-sm px-space-md">
+<span class="inline-flex items-center gap-1 font-code-sm text-[11px] font-bold text-[#D97706] bg-[#D97706]/10 px-2 py-0.5 border border-[#D97706]/30">
+<span class="w-1.5 h-1.5 bg-[#D97706] rounded-full"></span>
+                    REPEAT CALL #2
+                  </span>
+<span class="block font-body-sm text-body-sm text-on-surface-variant mt-0.5">Customer geo-arrived Dadar</span>
+</td>
+<td class="py-space-sm px-space-md">
+<span class="font-label-md text-label-md text-on-surface font-semibold block">TV + Desk PA</span>
+<div class="flex items-center gap-1 mt-0.5 font-code-sm text-[11px] text-on-surface-variant">
+<span class="bg-surface-container px-1">ENG</span>
+<span>+</span>
+<span class="bg-surface-container px-1 font-bold text-on-surface">हिंदी</span>
+<span class="text-on-surface-variant pl-1">• 5.0s (200 OK)</span>
+</div>
+</td>
+<td class="py-space-sm px-space-md text-right">
+<button class="h-9 px-3 bg-surface-container-lowest text-on-surface font-label-md text-label-md font-bold uppercase tracking-wider border-2 border-outline hover:border-secondary hover:text-secondary inline-flex items-center gap-1" onclick="rebroadcastItem('#8819', 'Vikram S.', 'Desk 2, Tray 3')" type="button">
+<span class="material-symbols-outlined text-[16px]">replay</span>
+<span>Re-announce</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low transition-none" data-type="manual">
+<td class="py-space-sm px-space-md font-code-sm text-code-sm font-bold text-on-surface whitespace-nowrap">
+                  07:15:20
+                  <span class="block text-[10px] text-on-surface-variant font-normal">T-24m ago</span>
+</td>
+<td class="py-space-sm px-space-md">
+<div class="flex items-center gap-2">
+<span class="font-code-sm text-code-sm font-bold bg-surface-container-highest px-2 py-0.5 border border-secondary text-secondary">B-01</span>
+<div>
+<span class="font-label-lg text-label-lg font-bold text-on-surface block">Amit K.</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Desk 1 • Architectural Blueprints</span>
+</div>
+</div>
+</td>
+<td class="py-space-sm px-space-md">
+<span class="inline-flex items-center gap-1 font-code-sm text-[11px] font-bold text-secondary bg-secondary/10 px-2 py-0.5 border border-secondary/30">
+<span class="w-1.5 h-1.5 bg-secondary rounded-full"></span>
+                    MANUAL PAGE
+                  </span>
+<span class="block font-body-sm text-body-sm text-on-surface-variant mt-0.5">Operator initiated call</span>
+</td>
+<td class="py-space-sm px-space-md">
+<span class="font-label-md text-label-md text-on-surface font-semibold block">All Speakers (PA+TV)</span>
+<div class="flex items-center gap-1 mt-0.5 font-code-sm text-[11px] text-on-surface-variant">
+<span class="bg-surface-container px-1 font-bold text-on-surface">मराठी Direct</span>
+<span class="text-on-surface-variant pl-1">• 3.8s (200 OK)</span>
+</div>
+</td>
+<td class="py-space-sm px-space-md text-right">
+<button class="h-9 px-3 bg-surface-container-lowest text-on-surface font-label-md text-label-md font-bold uppercase tracking-wider border-2 border-outline hover:border-secondary hover:text-secondary inline-flex items-center gap-1" onclick="rebroadcastItem('B-01', 'Amit K.', 'Desk 1')" type="button">
+<span class="material-symbols-outlined text-[16px]">replay</span>
+<span>Re-announce</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Audit Table Footer / Metrics Bar -->
+<div class="p-space-md bg-surface-container-low border-t-2 border-outline flex flex-wrap items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-md font-code-sm text-code-sm text-on-surface-variant">
+<span>DAEMON UPTIME: 14h 22m</span>
+<span>TOTAL CHIMES TODAY: 318</span>
+<span>FAILED DROPS: 0</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-space-sm py-1 bg-surface-container-lowest border border-outline font-label-md text-label-md text-on-surface hover:text-error" onclick="clearAuditLog()" type="button">Clear Filter Cache</button>
+<span class="font-code-sm text-code-sm font-bold text-on-tertiary-container">HARDWARE IN SYNC</span>
+</div>
+</div>
+</div>
+<!-- Realtime Audio Waveform Simulation Visualizer Card -->
+<div class="bg-primary-container text-on-primary-container p-space-md border-2 border-primary flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 bg-secondary rounded-full animate-ping"></span>
+<span class="font-code-sm text-code-sm font-bold uppercase tracking-wider text-on-primary">Live Output Monitor Bus (Ch 1-2)</span>
+</div>
+<span class="font-code-sm text-code-sm text-secondary-fixed font-bold" id="busStatusText">MONITORING IDLE</span>
+</div>
+<!-- Audio VU / Spectrum Bars Visualizer (SVG) -->
+<div class="w-full bg-primary h-16 p-2 flex items-end justify-between gap-1 overflow-hidden border border-on-primary-container/20">
+<div class="w-full h-2 bg-secondary" id="vuBar1"></div>
+<div class="w-full h-4 bg-secondary" id="vuBar2"></div>
+<div class="w-full h-3 bg-secondary" id="vuBar3"></div>
+<div class="w-full h-6 bg-secondary" id="vuBar4"></div>
+<div class="w-full h-8 bg-secondary" id="vuBar5"></div>
+<div class="w-full h-12 bg-secondary" id="vuBar6"></div>
+<div class="w-full h-14 bg-secondary" id="vuBar7"></div>
+<div class="w-full h-9 bg-secondary" id="vuBar8"></div>
+<div class="w-full h-11 bg-secondary" id="vuBar9"></div>
+<div class="w-full h-7 bg-secondary" id="vuBar10"></div>
+<div class="w-full h-4 bg-secondary" id="vuBar11"></div>
+<div class="w-full h-2 bg-secondary" id="vuBar12"></div>
+</div>
+<div class="flex justify-between items-center font-code-sm text-[11px] text-on-primary-container">
+<span>0Hz</span>
+<span>500Hz</span>
+<span>1kHz</span>
+<span>4kHz (Station Bell Peak)</span>
+<span>12kHz</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Realtime Toast Notification Banner for Dispatches -->
+<div class="fixed bottom-12 right-6 bg-primary text-on-primary border-2 border-outline px-space-md py-space-sm shadow-xl flex items-center gap-space-md transition-all duration-150 translate-y-24 opacity-0 z-50 pointer-events-none" id="liveAudioToast">
+<div class="w-8 h-8 bg-secondary flex items-center justify-center font-bold text-on-secondary">
+<span class="material-symbols-outlined text-[18px]">volume_up</span>
+</div>
+<div>
+<p class="font-label-lg text-label-lg font-bold uppercase tracking-wider" id="toastTitle">Audio Dispatched</p>
+<p class="font-body-sm text-body-sm text-inverse-primary" id="toastDetail">Dual-tone chime broadcasted to TV and PA Desk 1.</p>
+</div>
+</div>
+</div>
+<script>
+  // Interactive Synthesizer / Audio Test Engine
+  let isMuted = false;
+  let audioContext = null;
+
+  function getAudioContext() {
+    if (!audioContext) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        audioContext = new AudioCtx();
+      }
+    }
+    return audioContext;
+  }
+
+  // Synthesize realistic bell tones using Web Audio API
+  function playTone(freq1, freq2, duration) {
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      
+      const now = ctx.currentTime;
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = 'sine';
+      osc2.type = 'triangle';
+
+      osc1.frequency.setValueAtTime(freq1, now);
+      osc2.frequency.setValueAtTime(freq2, now);
+
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + duration);
+      osc2.stop(now + duration);
+
+      animateVU();
+    } catch (e) {
+      // Fallback silent execution if audio is disallowed
+    }
+  }
+
+  function playAudioSnippet(type) {
+    if (type === 'railway') {
+      playTone(493.88, 659.25, 0.9); // B4 to E5 railway chime
+      setTimeout(() => playTone(659.25, 987.77, 1.2), 300);
+      showToast('Chime Preview', 'Railway Dual-Tone [B4 ➔ E5] playing...');
+    } else if (type === 'mellow') {
+      playTone(523.25, 659.25, 0.8);
+      setTimeout(() => playTone(392.00, 523.25, 1.0), 350);
+      showToast('Chime Preview', 'Mellow Ding-Dong playing...');
+    } else if (type === 'buzzer') {
+      playTone(440, 220, 0.4);
+      showToast('Chime Preview', 'Classic Counter Buzzer test fired.');
+    } else if (type === 'beep') {
+      playTone(880, 880, 0.15);
+      showToast('Chime Preview', 'Minimalist Pip sounded.');
+    }
+  }
+
+  function animateVU() {
+    const bars = [1,2,3,4,5,6,7,8,9,10,11,12];
+    const busStatus = document.getElementById('busStatusText');
+    if (busStatus) busStatus.textContent = 'TRANSMITTING ACTIVE PA GAIN';
+    
+    bars.forEach(id => {
+      const el = document.getElementById('vuBar' + id);
+      if (el) {
+        const randH = Math.floor(Math.random() * 48) + 8;
+        el.style.height = randH + 'px';
+      }
+    });
+
+    setTimeout(() => {
+      bars.forEach(id => {
+        const el = document.getElementById('vuBar' + id);
+        if (el) {
+          el.style.height = (id % 3 === 0 ? 12 : 6) + 'px';
+        }
+      });
+      if (busStatus) busStatus.textContent = 'MONITORING IDLE';
+    }, 1200);
+  }
+
+  function showToast(title, msg) {
+    const toast = document.getElementById('liveAudioToast');
+    const toastTitle = document.getElementById('toastTitle');
+    const toastDetail = document.getElementById('toastDetail');
+    if (!toast) return;
+
+    toastTitle.textContent = title;
+    toastDetail.textContent = msg;
+    toast.classList.remove('translate-y-24', 'opacity-0');
+    toast.classList.add('translate-y-0', 'opacity-100');
+
+    setTimeout(() => {
+      toast.classList.remove('translate-y-0', 'opacity-100');
+      toast.classList.add('translate-y-24', 'opacity-0');
+    }, 3200);
+  }
+
+  function rebroadcastItem(token, name, desk) {
+    playTone(493.88, 659.25, 0.8);
+    setTimeout(() => playTone(659.25, 987.77, 1.0), 300);
+    showToast('Re-Broadcasting Live', `Token ${token} (${name}) paged for ${desk}`);
+  }
+
+  function triggerQuickPage(type) {
+    playTone(440, 554, 0.6);
+    if (type === 'repeat_unresponsive') {
+      showToast('Priority Paging Dispatched', 'Calling customer back to Desk 1 in Marathi & English.');
+    } else if (type === 'open_desk_2') {
+      showToast('Station Notice Dispatched', 'Announced Counter Desk 2 is now open for prints.');
+    } else if (type === 'shift_handover') {
+      showToast('Maintenance Chime Dispatched', 'Broadcast 3-minute printer supply pause notice.');
+    }
+  }
+
+  function clearAuditLog() {
+    showToast('Audit System', 'Client visual filter reset to All Broadcasts.');
+    const rows = document.querySelectorAll('#auditTableBody tr');
+    rows.forEach(r => r.style.display = '');
+  }
+
+  // Bind Event Listeners on Load
+  document.addEventListener('DOMContentLoaded', () => {
+    // Master Test Button
+    const masterTestBtn = document.getElementById('masterTestBtn');
+    if (masterTestBtn) {
+      masterTestBtn.addEventListener('click', () => {
+        playTone(493.88, 659.25, 0.9);
+        setTimeout(() => playTone(659.25, 987.77, 1.2), 320);
+        showToast('PA Broadcast Test Fired', 'Master speaker test verified across TV 01 and Desk PA 01.');
+      });
+    }
+
+    // Volume Slider & Mute
+    const volSlider = document.getElementById('masterVolSlider');
+    const volVal = document.getElementById('masterVolVal');
+    const muteBtn = document.getElementById('masterMuteBtn');
+    const muteIcon = document.getElementById('masterMuteIcon');
+
+    if (volSlider && volVal) {
+      volSlider.addEventListener('input', (e) => {
+        volVal.textContent = e.target.value + '%';
+        if (e.target.value == 0) {
+          muteIcon.textContent = 'volume_off';
+        } else {
+          muteIcon.textContent = 'volume_up';
+        }
+      });
+    }
+
+    if (muteBtn && muteIcon) {
+      muteBtn.addEventListener('click', () => {
+        isMuted = !isMuted;
+        if (isMuted) {
+          muteIcon.textContent = 'volume_off';
+          volVal.textContent = '0%';
+          volSlider.value = 0;
+          showToast('Master PA Gain', 'All hardware outputs muted.');
+        } else {
+          muteIcon.textContent = 'volume_up';
+          volVal.textContent = '82%';
+          volSlider.value = 82;
+          showToast('Master PA Gain', 'Speakers unmuted to 82% operational volume.');
+        }
+      });
+    }
+
+    // Auto Announce Toggle
+    const autoBtn = document.getElementById('autoToggleBtn');
+    if (autoBtn) {
+      autoBtn.addEventListener('click', () => {
+        const isCurrent = autoBtn.getAttribute('aria-pressed') === 'true';
+        if (isCurrent) {
+          autoBtn.setAttribute('aria-pressed', 'false');
+          autoBtn.classList.remove('bg-[#16A34A]', 'justify-end');
+          autoBtn.classList.add('bg-outline-variant', 'justify-start');
+          showToast('Automation Setting', 'Auto-announce on print completion turned OFF.');
+        } else {
+          autoBtn.setAttribute('aria-pressed', 'true');
+          autoBtn.classList.remove('bg-outline-variant', 'justify-start');
+          autoBtn.classList.add('bg-[#16A34A]', 'justify-end');
+          showToast('Automation Setting', 'Auto-announce on print completion turned ON.');
+        }
+      });
+    }
+
+    // Simulation Trigger
+    const simBtn = document.getElementById('simBroadcastBtn');
+    const simInput = document.getElementById('simTokenInput');
+    const simMsg = document.getElementById('simStatusMsg');
+
+    if (simBtn && simInput) {
+      simBtn.addEventListener('click', () => {
+        const val = simInput.value.trim().toUpperCase() || 'A-01';
+        playTone(493.88, 659.25, 0.7);
+        setTimeout(() => playTone(659.25, 987.77, 1.0), 300);
+        
+        simMsg.textContent = `Broadcasted: "[Chime] Token ${val}, Desk 1 Ready" in Eng + Mar.`;
+        simMsg.classList.add('text-secondary', 'font-bold');
+        showToast('Sandbox Dispatched', `Simulated audio token ${val} played across TV and PA.`);
+        
+        setTimeout(() => {
+          simMsg.classList.remove('text-secondary', 'font-bold');
+          simMsg.textContent = 'Ready to test voice pipeline against selected speaker matrix.';
+        }, 4000);
+      });
+    }
+
+    // Feed Filter Tabs
+    const filterAll = document.getElementById('filterAll');
+    const filterReady = document.getElementById('filterReady');
+    const filterManual = document.getElementById('filterManual');
+    const filterRepeat = document.getElementById('filterRepeat');
+    const buttons = [filterAll, filterReady, filterManual, filterRepeat];
+
+    function setFilterActive(activeBtn, typeFilter) {
+      buttons.forEach(btn => {
+        if (!btn) return;
+        btn.classList.remove('bg-primary', 'text-on-primary');
+        btn.classList.add('text-on-surface');
+      });
+      activeBtn.classList.add('bg-primary', 'text-on-primary');
+      activeBtn.classList.remove('text-on-surface');
+
+      const rows = document.querySelectorAll('#auditTableBody tr');
+      rows.forEach(r => {
+        if (typeFilter === 'all' || r.getAttribute('data-type') === typeFilter) {
+          r.style.display = '';
+        } else {
+          r.style.display = 'none';
+        }
+      });
+    }
+
+    if (filterAll) filterAll.addEventListener('click', () => setFilterActive(filterAll, 'all'));
+    if (filterReady) filterReady.addEventListener('click', () => setFilterActive(filterReady, 'ready'));
+    if (filterManual) filterManual.addEventListener('click', () => setFilterActive(filterManual, 'manual'));
+    if (filterRepeat) filterRepeat.addEventListener('click', () => setFilterActive(filterRepeat, 'repeat'));
+  });
+</script></main><footer class="w-full bg-surface-container-lowest border-t border-outline-variant py-space-sm"><div class="w-full px-space-lg flex items-center justify-between"><div class="flex items-center gap-space-md font-code-sm text-code-sm text-on-surface-variant"><span>STATION NODE: DDR-W-04</span><span>LATENCY: 4MS (LAN HARDWIRED)</span><span>OPERATOR: IM-9021</span></div><div class="flex items-center gap-space-md font-label-md text-label-md text-on-surface-variant"><span class="text-on-tertiary-container font-bold">● QUEUE DAEMON ACTIVE</span><span>COUNTER DROP OS v2.4</span></div></div></footer></body></html>

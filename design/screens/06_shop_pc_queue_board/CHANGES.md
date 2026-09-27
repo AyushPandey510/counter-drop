@@ -1,0 +1,40 @@
+# Changes from the Stitch export (pc_live_print_queue_dashboard)
+
+- text: "Counter Desk • Terminal D-01 • 12 Connected Devices" → "Counter 1 · Kavita (staff)" (1x)
+- text: "Token (e.g. DDR-0492) / Mobile" → "Token, pickup code or name" (1x)
+- removed "Walk-in Quick Job" (+1 up) — staff do not create jobs; customers upload
+- removed "Rack & Dispense" (+1 up) — no racks
+- removed "Device Telemetry" (+1 up) — printer telemetry needs the R2 print agent
+- text: "Counter Cash Ledger" → "Today's summary" (1x)
+- text: "Ramesh P. (Shift A)" → "Kavita · Switch staff" (1x)
+- text: "LOUD CHIME: ACTIVE [M]" → "SOUND: ON [M]" (1x)
+- removed "1-3: Announce Tokens" (+0 up) — spoken announcements moved to a later release
+- text: "WhatsApp • 9m ago" → "Print nearby • 9m ago" (1x)
+- text: "₹32.00 COD" → "₹32.00 · pay at counter" (1x)
+- removed "Canon IR-2525" (+0 up) — printer names need the R2 print agent
+- removed block with "Output Tray A" + "25 / 32 printed" — page progress needs the R2 agent
+- text: "TERMINAL D-01 • COUNTER 1" → "COUNTER 1 · KAVITA" (1x)
+- text: "B/W Duplex (16 sheets)" → "B/W both sides (16 sheets)" (1x)
+- text: "LANE A • B/W DUPLEX" → "LANE A • B/W" (1x)
+- text: "RUSH MODE: OFF" → "RUSH MODE: ON" (1x)
+- removed block with "LANE 1" + "LANE 2" — unclear header control; lanes are filter tabs below
+- replaced section "Progress bar" — R1 prints via the browser; page progress needs the R2 agent
+- text: "Re-queue" → "Release" (1x)
+- text: "Corrupt File" → "Ask customer" (1x)
+- text: "Override Price / Edit Spec" → "Edit or override price" (1x)
+- text: "RACK TRAY 1" → "READY" (1x)
+- text: "RACK TRAY 3" → "READY" (1x)
+- text: "Cash ₹12" → "Paid cash" (1x)
+- text: "Shop QR" → "Paid UPI" (1x)
+- text: "Handover & Collected [C]" → "Collected [C]" (1x)
+- text: "Razorpay Verified" → "Paid online" (1x)
+- text: "Dispense" → "Collected" (2x)
+- text: "DISPENSED" → "UNDO 10 MIN" (1x)
+- text: "Auto-purge: 06:45" → "Files deleted in 06:45" (1x)
+- text: "Undo Collected • Return to Rack" → "Undo collected" (1x)
+- text: "Archived to Daily Register" → "Files deleted 10:12 AM" (1x)
+- removed section "Quick Hardware Status Widget" — printer status needs the R2 print agent
+- removed "New Walk-in Order [W]" (+1 up) — staff do not create jobs
+- OTP field → "Pickup code" (FS-9.9)
+- removed the audio announcement modal — moved to a later release
+- brand image → inline Counter Drop logo

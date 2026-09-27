@@ -1,0 +1,488 @@
+<!DOCTYPE html><html lang="en" style=""><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&amp;family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "primary-container": "#131b2e", "error-container": "#ffdad6", "secondary": "#0051d5", "inverse-surface": "#213145", "on-surface-variant": "#45464d", "surface-variant": "#d3e4fe", "secondary-fixed": "#dbe1ff", "inverse-on-surface": "#eaf1ff", "on-tertiary-fixed-variant": "#005323", "on-secondary": "#ffffff", "surface-dim": "#cbdbf5", "surface": "#f8f9ff", "surface-bright": "#f8f9ff", "on-primary": "#ffffff", "on-secondary-container": "#fefcff", "tertiary": "#000000", "on-primary-fixed": "#131b2e", "background": "#f8f9ff", "primary": "#000000", "tertiary-container": "#00210a", "outline-variant": "#c6c6cd", "surface-container-lowest": "#ffffff", "on-primary-fixed-variant": "#3f465c", "surface-tint": "#565e74", "on-surface": "#0b1c30", "surface-container-highest": "#d3e4fe", "on-background": "#0b1c30", "surface-container-low": "#eff4ff", "secondary-fixed-dim": "#b4c5ff", "primary-fixed-dim": "#bec6e0", "on-tertiary-fixed": "#00210a", "on-tertiary": "#ffffff", "on-error": "#ffffff", "surface-container": "#e5eeff", "primary-fixed": "#dae2fd", "on-primary-container": "#7c839b", "error": "#ba1a1a", "tertiary-fixed": "#95f8a7", "inverse-primary": "#bec6e0", "on-secondary-fixed": "#00174b", "surface-container-high": "#dce9ff", "outline": "#76777d", "on-tertiary-container": "#339650", "on-error-container": "#93000a", "on-secondary-fixed-variant": "#003ea8", "secondary-container": "#316bf3", "tertiary-fixed-dim": "#79db8d" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "space-md": "1rem", "space-sm": "0.5rem", "space-xs": "0.25rem", "margin": "1rem", "space-lg": "1.5rem", "gutter": "1rem", "space-xl": "2.5rem" }, "fontFamily": { "label-md": ["Noto Sans"], "label-lg": ["Noto Sans"], "headline-sm": ["Noto Sans"], "headline-md": ["Noto Sans"], "headline-lg": ["Noto Sans"], "token-display": ["JetBrains Mono"], "body-md": ["Noto Sans"], "body-sm": ["Noto Sans"], "body-lg": ["Noto Sans"], "headline-xl": ["Noto Sans"], "token-display-mobile": ["JetBrains Mono"], "code-sm": ["JetBrains Mono"], "headline-xl-mobile": ["Noto Sans"] }, "fontSize": { "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }], "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }], "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }], "headline-lg": ["24px", { "lineHeight": "32px", "fontWeight": "700" }], "token-display": ["64px", { "lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "500" }], "headline-xl": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "token-display-mobile": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.01em", "fontWeight": "700" }], "code-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }], "headline-xl-mobile": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "700" }] } } } };</script></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased"><header class="fixed top-0 left-0 right-0 z-50 bg-primary-container text-on-primary"><div class="h-16 w-full px-space-md flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-md min-w-0"><img alt="Brand logo. - Primary color: #0f172a
+- Font: notoSans
+- Mode: light
+- Roundness: rounded-sm
+" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1XI2pWr5mPcHYg3vbr7cuOrjH-sabuiNc8GrixF25ahPd24LmJc0s1JgVxxna0CuiGVs9bz798OHkYq4Ph4sxm0Gvk7EKrQC1J4Z7jNaGWROVhiEc5soQWSCGiXI4GW2YWdr3F4M-siT7bB5scyja9-pgnWJ0wqCIfCn_Yl3W09Utjd72cUd6VjWNBElnIw5IoaUhJWMDAetWHQJsbbO0N8ZxDLHjnJWOD0Di_Xr4A-Y56gJ_TUMwoPKJQK"><div class="flex flex-col min-w-0"><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm font-bold text-on-primary truncate">Imran Xerox &amp; Digital Print</span><span class="px-space-xs py-0.5 bg-secondary text-on-secondary font-label-md text-label-md rounded">DADAR WEST</span></div><span class="font-code-sm text-code-sm text-on-primary-container truncate">Counter Desk • Terminal D-01 • 12 Connected Devices</span></div></div><div class="hidden xl:flex items-center gap-space-sm bg-inverse-surface p-space-xs rounded"><div class="flex items-center gap-1.5 px-space-sm py-1 bg-tertiary-container text-on-tertiary-container rounded font-label-md text-label-md"><span class="w-2 h-2 rounded-full bg-tertiary-fixed"></span><span class="">INTAKE ACTIVE</span></div><div class="flex items-center gap-1.5 px-space-sm py-1 bg-surface-container-lowest text-primary rounded font-label-md text-label-md"><span class="material-symbols-outlined text-[16px]">bolt</span><span class="">RUSH MODE: OFF</span></div><div class="flex items-center gap-1.5 px-space-sm py-1 text-inverse-on-surface font-label-md text-label-md"><span class="material-symbols-outlined text-[16px]">volume_up</span><span class="">ALERTS ON</span></div></div><div class="flex items-center gap-space-md"><div class="hidden md:flex items-center bg-inverse-surface px-space-sm py-1.5 rounded gap-space-xs"><span class="material-symbols-outlined text-inverse-on-surface text-[18px]">search</span><span class="font-code-sm text-code-sm text-on-primary-container">Token (e.g. DDR-0492) / Mobile</span></div><div class="flex items-center gap-space-xs bg-inverse-surface p-1 rounded font-label-md text-label-md text-inverse-on-surface"><span class="px-space-xs py-0.5 bg-secondary text-on-secondary rounded">LANE 1</span><span class="px-space-xs py-0.5 text-inverse-on-surface">LANE 2</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><aside class="fixed left-0 top-16 bottom-0 w-64 bg-surface-container-lowest z-40 flex flex-col justify-between py-space-md"><div class="flex flex-col gap-space-md px-space-md"><div class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Counter Operations</div><nav class="flex flex-col gap-space-xs" data-active-classes="bg-secondary text-on-secondary font-bold"><a class="flex items-center justify-between px-space-sm py-2.5 rounded text-on-surface hover:bg-surface-container hover:text-on-surface" data-path="live-queue" href="#"><span class="font-label-lg text-label-lg">Live Print Queue</span><span class="px-1.5 py-0.5 bg-secondary-container text-on-secondary-container rounded font-code-sm text-code-sm">18</span></a><a class="flex items-center justify-between px-space-sm py-2.5 rounded text-on-surface hover:bg-surface-container hover:text-on-surface" data-path="walk-in-order" href="#"><span class="font-label-lg text-label-lg">Walk-in Quick Job</span><span class="material-symbols-outlined text-[18px]">add</span></a><a class="flex items-center justify-between px-space-sm py-2.5 rounded text-on-surface hover:bg-surface-container hover:text-on-surface" data-path="pickup-racks" href="#"><span class="font-label-lg text-label-lg">Rack &amp; Dispense</span><span class="px-1.5 py-0.5 bg-surface-container-high text-on-surface rounded font-code-sm text-code-sm">R-1 to R-8</span></a><a class="flex items-center justify-between px-space-sm py-2.5 rounded text-on-surface hover:bg-surface-container hover:text-on-surface" data-path="hardware-status" href="#"><span class="font-label-lg text-label-lg">Device Telemetry</span><span class="w-2 h-2 rounded-full bg-tertiary-container"></span></a><a class="flex items-center justify-between px-space-sm py-2.5 rounded text-on-surface hover:bg-surface-container hover:text-on-surface" data-path="daily-ledger" href="#"><span class="font-label-lg text-label-lg">Counter Cash Ledger</span><span class="font-code-sm text-code-sm">₹</span></a></nav></div><div class="px-space-md flex flex-col gap-space-xs"><div class="p-space-sm bg-surface-container-low rounded flex flex-col gap-1"><span class="font-label-md text-label-md text-on-surface-variant">ACTIVE OPERATOR</span><span class="font-body-md text-body-md font-bold text-on-surface">Ramesh P. (Shift A)</span><span class="font-code-sm text-code-sm text-secondary font-bold">LOGIN: 07:30 AM</span></div></div></aside><div class="pl-64"><main class="relative pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<!-- Top Command & Action Bar -->
+<div class="w-full bg-surface-container-lowest shadow-sm flex flex-col gap-space-sm p-space-md">
+<div class="flex flex-wrap items-center justify-between gap-space-md">
+<!-- Left: Shop Operational Status & Quick Modes -->
+<div class="flex items-center gap-space-sm flex-wrap">
+<div class="flex items-center gap-2 px-space-sm py-2 bg-tertiary-container rounded">
+<span class="w-3 h-3 rounded-full bg-tertiary-fixed inline-block"></span>
+<span class="font-label-lg text-label-lg text-on-tertiary-container tracking-wide font-bold">ONLINE / TAKING JOBS</span>
+</div>
+<button class="px-space-sm py-2 bg-surface-container-low hover:bg-surface-container text-on-surface rounded font-label-lg text-label-lg flex items-center gap-1.5 transition-colors" id="btnPauseIntake">
+<span class="material-symbols-outlined text-[18px]">pause_circle</span>
+<span class="">Pause Intake</span>
+</button>
+<button class="px-space-sm py-2 bg-error text-on-error rounded font-label-lg text-label-lg flex items-center gap-1.5 shadow-sm" id="btnRushMode">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="">RUSH MODE: ON</span>
+</button>
+<button class="flex items-center gap-1.5 px-space-sm py-2 bg-secondary text-on-secondary rounded font-label-md text-label-md font-bold shadow-sm transition-transform active:scale-[0.98]" id="btnAudioModalTrigger" title="Click to configure Audio Chime &amp; PA Announcements"><span class="material-symbols-outlined text-[18px] text-on-secondary" style="font-variation-settings: 'FILL' 1;">volume_up</span><span class="font-bold">LOUD CHIME: ACTIVE [M]</span></button>
+</div>
+<!-- Right: Global Keyboard Shortcut Legend -->
+<div class="hidden lg:flex items-center gap-space-xs bg-surface-container-low p-1.5 rounded">
+<span class="font-code-sm text-code-sm text-on-surface-variant font-bold px-1">KEYS:</span>
+<span class="px-2 py-1 bg-surface-container-lowest shadow-sm rounded font-code-sm text-code-sm text-primary font-bold">N: Claim Next</span>
+<span class="px-2 py-1 bg-surface-container-lowest shadow-sm rounded font-code-sm text-code-sm text-primary font-bold">R: Mark Ready</span>
+<span class="px-2 py-1 bg-surface-container-lowest shadow-sm rounded font-code-sm text-code-sm text-primary font-bold">C: Collected</span>
+<span class="px-2 py-1 bg-surface-container-lowest shadow-sm rounded font-code-sm text-code-sm text-primary font-bold">/: Search</span>
+<span class="px-2 py-1 bg-surface-container-lowest shadow-sm rounded font-code-sm text-code-sm text-primary font-bold">1-3: Announce Tokens</span></div>
+</div>
+<!-- Sub-row: Lane Filter Segmented Tabs & Instant Search -->
+<div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-space-md pt-space-xs">
+<!-- Segmented Lanes -->
+<div class="flex items-center bg-surface-container-low p-1 rounded gap-1 overflow-x-auto">
+<button class="px-space-sm py-2 rounded bg-secondary text-on-secondary font-label-md text-label-md font-bold whitespace-nowrap shadow-sm">
+          All Lanes (7)
+        </button>
+<button class="px-space-sm py-2 rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container font-label-md text-label-md whitespace-nowrap">
+          Lane A - B/W Quick (4)
+        </button>
+<button class="px-space-sm py-2 rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container font-label-md text-label-md whitespace-nowrap">
+          Lane B - Color &amp; Binding (3)
+        </button>
+</div>
+<!-- Quick Search Bar -->
+<div class="relative flex-1 max-w-xl">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+<input class="w-full h-12 pl-10 pr-12 bg-surface-container-low focus:bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded outline-none placeholder:text-outline shadow-inner" id="queueSearchInput" placeholder="Search Token (e.g. A-07), Pickup Code (4 digits), or First Name... [Press /]" type="text">
+<span class="absolute right-3 top-1/2 -translate-y-1/2 font-code-sm text-code-sm px-1.5 py-0.5 bg-surface-container text-on-surface-variant rounded">/</span>
+</div>
+</div>
+</div>
+<!-- Intakes Paused Toast Alert (Hidden by default) -->
+<div class="hidden mx-space-md mt-space-md p-space-sm bg-inverse-surface text-inverse-on-surface rounded shadow-md flex items-center justify-between" id="toastNotification">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[20px] text-tertiary-fixed">info</span>
+<span class="font-body-md text-body-md font-bold">Intake status updated: Walk-in counter intake temporarily toggled.</span>
+</div>
+<button class="px-2 py-1 bg-surface-container-lowest text-primary rounded font-label-md text-label-md font-bold" onclick="document.getElementById('toastNotification').classList.add('hidden')">DISMISS</button>
+</div>
+<!-- Primary 4-Column KanBan Live Board -->
+<div class="p-space-md grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-md items-start">
+<!-- ==================== COLUMN 1: INCOMING / QUEUED ==================== -->
+<div class="flex flex-col gap-space-sm bg-surface-container-low p-space-sm rounded shadow-sm">
+<!-- Col Header -->
+<div class="flex items-center justify-between pb-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="w-3 h-3 bg-secondary rounded-full inline-block"></span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface uppercase">Incoming / Queued</span>
+</div>
+<span class="px-2 py-0.5 bg-surface-container-high text-on-surface font-code-sm text-code-sm rounded font-bold">3 JOBS</span>
+</div>
+<!-- Action Button: Claim Oldest -->
+<button class="w-full min-h-[52px] bg-secondary hover:bg-secondary-container text-on-secondary rounded font-label-lg text-label-lg font-bold flex items-center justify-center gap-2 shadow-sm transition-transform active:scale-[0.99]">
+<span class="material-symbols-outlined text-[20px]">play_arrow</span>
+<span class="">Claim Oldest Job [N]</span>
+</button>
+<!-- Card 1.1: Token A-07 -->
+<div class="bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-sm relative">
+<div class="flex items-start justify-between">
+<div>
+<span class="font-code-sm text-code-sm text-secondary font-bold uppercase tracking-wider">LANE A • B/W DUPLEX</span>
+<div class="font-token-display-mobile text-token-display-mobile font-bold text-on-surface tracking-tighter leading-none mt-1">A-07</div>
+</div>
+<div class="text-right">
+<span class="px-2 py-1 bg-surface-container text-on-surface font-code-sm text-code-sm rounded font-bold">₹18.00</span>
+<div class="font-body-sm text-body-sm text-on-surface-variant mt-1">Walk-in • 4m ago</div>
+</div>
+</div>
+<div class="p-space-xs bg-surface-container-low rounded flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-secondary">person</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">Priya</span>
+</div>
+<span class="font-code-sm text-code-sm font-bold text-on-surface">2 files (16 pgs)</span>
+</div>
+<div class="flex items-center gap-2 font-body-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">description</span>
+<span class="truncate">Aadhaar_FrontBack.pdf, HallTicket.pdf</span>
+</div>
+<button class="w-full h-11 bg-primary text-on-primary hover:bg-inverse-surface rounded font-label-md text-label-md font-bold flex items-center justify-center gap-1.5 transition-colors">
+<span class="">Claim Job</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+<!-- Card 1.2: Token B-02 -->
+<div class="bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-sm">
+<div class="flex items-start justify-between">
+<div>
+<span class="font-code-sm text-code-sm text-error font-bold uppercase tracking-wider">LANE B • COLOR + STAPLE</span>
+<div class="font-token-display-mobile text-token-display-mobile font-bold text-on-surface tracking-tighter leading-none mt-1">B-02</div>
+</div>
+<div class="text-right">
+<span class="px-2 py-1 bg-surface-container text-on-surface font-code-sm text-code-sm rounded font-bold">₹45.00</span>
+<div class="font-body-sm text-body-sm text-on-surface-variant mt-1">Walk-in • 6m ago</div>
+</div>
+</div>
+<div class="p-space-xs bg-surface-container-low rounded flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-secondary">person</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">Rahul M.</span>
+</div>
+<span class="font-code-sm text-code-sm font-bold text-on-surface">1 file (4 pgs)</span>
+</div>
+<div class="flex items-center gap-2 font-body-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">palette</span>
+<span class="truncate">Project_Proposal_Draft_v2.pdf</span>
+</div>
+<button class="w-full h-11 bg-primary text-on-primary hover:bg-inverse-surface rounded font-label-md text-label-md font-bold flex items-center justify-center gap-1.5 transition-colors">
+<span class="">Claim Job</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+<!-- Card 1.3: Code #4921 Remote Order -->
+<div class="bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-sm">
+<div class="flex items-start justify-between">
+<div>
+<span class="px-2 py-0.5 bg-secondary-fixed text-on-secondary-fixed rounded font-code-sm text-code-sm font-bold uppercase">REMOTE ORDER</span>
+<div class="font-token-display-mobile text-token-display-mobile font-bold text-secondary tracking-tighter leading-none mt-1">#4921</div>
+</div>
+<div class="text-right">
+<span class="px-2 py-1 bg-tertiary-container text-on-tertiary-container font-code-sm text-code-sm rounded font-bold">PAID ₹34.00</span>
+<div class="font-body-sm text-body-sm text-on-surface-variant mt-1">WhatsApp • 9m ago</div>
+</div>
+</div>
+<div class="p-space-xs bg-surface-container-low rounded flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-secondary">phone_iphone</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">Amit K.</span>
+</div>
+<span class="font-code-sm text-code-sm font-bold text-on-surface">8 pgs Color Single</span>
+</div>
+<div class="flex items-center gap-2 font-body-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">link</span>
+<span class="truncate">Certificates_Combined_Scan.pdf</span>
+</div>
+<button class="w-full h-11 bg-primary text-on-primary hover:bg-inverse-surface rounded font-label-md text-label-md font-bold flex items-center justify-center gap-1.5 transition-colors">
+<span class="">Claim Job</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- ==================== COLUMN 2: CURRENTLY PRINTING / COUNTER ==================== -->
+<div class="flex flex-col gap-space-sm bg-surface-container-low p-space-sm rounded shadow-sm">
+<!-- Col Header -->
+<div class="flex items-center justify-between pb-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="w-3 h-3 bg-secondary-container rounded-full inline-block"></span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface uppercase">Printing / In Progress</span>
+</div>
+<span class="px-2 py-0.5 bg-surface-container-high text-on-surface font-code-sm text-code-sm rounded font-bold">1 ACTIVE</span>
+</div>
+<!-- Active Counter Job Focus Card -->
+<div class="bg-surface-container-lowest p-space-md rounded shadow-md flex flex-col gap-space-md">
+<div class="flex items-center justify-between bg-primary-container text-on-primary p-space-sm rounded">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-tertiary-fixed">print</span>
+<span class="font-label-lg text-label-lg font-bold">TERMINAL D-01 • COUNTER 1</span>
+</div>
+<div class="flex items-center gap-1 font-code-sm text-code-sm text-tertiary-fixed font-bold">
+<span class="w-2 h-2 rounded-full bg-tertiary-fixed"></span>
+<span class="">PRINTING</span>
+</div>
+</div>
+<!-- Token Hero -->
+<div class="flex items-end justify-between">
+<div>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase font-bold">CURRENT EXECUTION</span>
+<div class="font-token-display text-token-display font-bold text-on-surface tracking-tighter leading-none">A-06</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-code-sm text-code-sm text-on-surface-variant font-bold">ELAPSED TIME</span>
+<span class="font-headline-lg text-headline-lg font-bold font-code-sm text-secondary">01:42</span>
+</div>
+</div>
+<!-- Job Specs Strip -->
+<div class="p-space-sm bg-surface-container-low rounded flex flex-col gap-1.5">
+<div class="flex items-center justify-between">
+<span class="font-headline-md text-headline-md font-bold text-on-surface">S. Joshi</span>
+<span class="font-label-md text-label-md px-2 py-0.5 bg-surface-container-high text-on-surface font-bold rounded">₹32.00 COD</span>
+</div>
+<div class="font-body-md text-body-md text-on-surface flex items-center justify-between">
+<span class="">32 pages • B/W Duplex (16 sheets)</span>
+<span class="font-code-sm text-code-sm text-secondary font-bold">Canon IR-2525</span>
+</div>
+</div>
+<!-- Interactive File Preview Bar -->
+<div class="p-space-sm bg-surface-container rounded flex flex-col gap-1.5">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-[20px] text-primary">picture_as_pdf</span>
+<span class="font-label-md text-label-md font-bold text-on-surface truncate">Syllabus_2026.pdf</span>
+</div>
+<span class="font-code-sm text-code-sm text-on-surface-variant">Pages 1-32</span>
+</div>
+<!-- Progress bar -->
+<div class="w-full bg-surface-container-high h-2 rounded overflow-hidden">
+<div class="bg-secondary h-full w-[78%]"></div>
+</div>
+<div class="flex justify-between font-code-sm text-code-sm text-on-surface-variant pt-0.5">
+<span class="">Output Tray A</span>
+<span class="">25 / 32 printed</span>
+</div>
+</div>
+<!-- Action Grid -->
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<!-- Big Solid Ready Action -->
+<button class="w-full min-h-[52px] bg-tertiary-container hover:bg-black text-on-tertiary-container rounded font-label-lg text-label-lg font-bold flex items-center justify-center gap-2 shadow-sm transition-transform active:scale-[0.99]">
+<span class="material-symbols-outlined text-[24px]">check_circle</span>
+<span class="">MARK READY [R]</span>
+</button>
+<!-- Secondary Operational Actions -->
+<div class="grid grid-cols-2 gap-space-xs">
+<button class="h-10 bg-surface-container-lowest hover:bg-surface-container text-on-surface rounded font-label-md text-label-md font-bold flex items-center justify-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[16px]">undo</span>
+<span class="">Re-queue</span>
+</button>
+<button class="h-10 bg-surface-container-lowest hover:bg-surface-container text-error rounded font-label-md text-label-md font-bold flex items-center justify-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[16px]">report_problem</span>
+<span class="">Corrupt File</span>
+</button>
+</div>
+<button class="h-10 bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant rounded font-label-md text-label-md font-bold flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[16px]">edit_note</span>
+<span class="">Override Price / Edit Spec</span>
+</button>
+</div>
+</div>
+</div>
+<!-- ==================== COLUMN 3: READY FOR PICKUP ==================== -->
+<div class="flex flex-col gap-space-sm bg-surface-container-low p-space-sm rounded shadow-sm">
+<!-- Col Header -->
+<div class="flex items-center justify-between pb-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="w-3 h-3 bg-tertiary-container rounded-full inline-block"></span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface uppercase">Ready for Pickup</span>
+</div>
+<span class="px-2 py-0.5 bg-surface-container-high text-on-surface font-code-sm text-code-sm rounded font-bold">2 READY</span>
+</div>
+<!-- Card 3.1: Token A-05 (Unpaid Cash/UPI) -->
+<div class="bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-sm">
+<div class="flex items-start justify-between">
+<div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 bg-primary text-on-primary font-code-sm text-code-sm rounded font-bold">RACK TRAY 1</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">3 min ago</span>
+</div>
+<div class="font-token-display-mobile text-token-display-mobile font-bold text-on-surface tracking-tighter leading-none mt-1">A-05</div>
+</div>
+<div class="text-right">
+<span class="px-2 py-1 bg-error-container text-on-error-container font-code-sm text-code-sm rounded font-bold uppercase tracking-wider">DUE ₹12.00</span>
+<div class="font-body-sm text-body-sm text-error font-bold mt-1">Unpaid</div>
+</div>
+</div>
+<div class="p-space-xs bg-surface-container-low rounded flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">Sunita P.</span>
+<span class="font-code-sm text-code-sm text-on-surface">4 pgs B/W Single</span>
+</div>
+<!-- Rapid Payment Toggles -->
+<div class="grid grid-cols-2 gap-space-xs pt-1">
+<button class="h-9 bg-surface-container-high hover:bg-secondary hover:text-on-secondary text-on-surface rounded font-code-sm text-code-sm font-bold flex items-center justify-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[16px]">payments</span>
+<span class="">Cash ₹12</span>
+</button>
+<button class="h-9 bg-surface-container-high hover:bg-secondary hover:text-on-secondary text-on-surface rounded font-code-sm text-code-sm font-bold flex items-center justify-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[16px]">qr_code_2</span>
+<span class="">Shop QR</span>
+</button>
+</div>
+<!-- Handover Action -->
+<button class="w-full min-h-[48px] bg-tertiary-container hover:bg-black text-on-tertiary-container rounded font-label-md text-label-md font-bold flex items-center justify-center gap-1.5 shadow-sm transition-transform active:scale-[0.99]">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+<span class="">Handover &amp; Collected [C]</span>
+</button>
+</div>
+<!-- Card 3.2: Code #8819 (Prepaid Verification) -->
+<div class="bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-sm">
+<div class="flex items-start justify-between">
+<div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 bg-primary text-on-primary font-code-sm text-code-sm rounded font-bold">RACK TRAY 3</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">8 min ago</span>
+</div>
+<div class="font-token-display-mobile text-token-display-mobile font-bold text-secondary tracking-tighter leading-none mt-1">#8819</div>
+</div>
+<div class="text-right">
+<span class="px-2 py-1 bg-tertiary-container text-on-tertiary-container font-code-sm text-code-sm rounded font-bold">PREPAID</span>
+<div class="font-body-sm text-body-sm text-tertiary-container font-bold mt-1">Razorpay Verified</div>
+</div>
+</div>
+<div class="p-space-xs bg-surface-container-low rounded flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">Vikram S.</span>
+<span class="font-code-sm text-code-sm text-on-surface">6 pgs Color Bond</span>
+</div>
+<div class="flex items-center gap-2">
+<input class="w-20 h-11 text-center bg-surface-container-low text-on-surface font-token-display-mobile text-[20px] font-bold rounded outline-none shadow-inner" maxlength="4" placeholder="OTP" type="text">
+<button class="flex-1 h-11 bg-secondary text-on-secondary hover:bg-secondary-container rounded font-label-md text-label-md font-bold flex items-center justify-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">lock_open</span>
+<span class="">Dispense</span>
+</button>
+</div>
+</div>
+</div>
+<!-- ==================== COLUMN 4: RECENT & 10-MIN UNDO ==================== -->
+<div class="flex flex-col gap-space-sm bg-surface-container-low p-space-sm rounded shadow-sm">
+<!-- Col Header -->
+<div class="flex items-center justify-between pb-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="w-3 h-3 bg-on-surface-variant rounded-full inline-block"></span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface uppercase">Recent &amp; 10-Min Undo</span>
+</div>
+<span class="px-2 py-0.5 bg-surface-container-high text-on-surface font-code-sm text-code-sm rounded font-bold">DISPENSED</span>
+</div>
+<!-- Card 4.1: Token A-04 Undo Card -->
+<div class="bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-sm">
+<div class="flex items-start justify-between">
+<div>
+<span class="font-code-sm text-code-sm text-on-surface-variant font-bold">COLLECTED AT 10:14 AM</span>
+<div class="font-token-display-mobile text-token-display-mobile font-bold text-on-surface-variant tracking-tighter leading-none mt-1">A-04</div>
+</div>
+<div class="text-right">
+<span class="px-2 py-1 bg-surface-container text-on-surface font-code-sm text-code-sm rounded font-bold">₹24.00</span>
+<div class="font-body-sm text-body-sm text-error font-bold mt-1">Auto-purge: 06:45</div>
+</div>
+</div>
+<div class="p-space-xs bg-surface-container-low rounded flex items-center justify-between">
+<span class="font-body-md text-body-md font-bold text-on-surface">Karan V.</span>
+<span class="font-code-sm text-code-sm text-on-surface-variant">Spiral Bound Booklet</span>
+</div>
+<!-- Prominent Solid Amber Undo Button -->
+<button class="w-full min-h-[48px] bg-outline-variant hover:bg-surface-container-high text-primary rounded font-label-md text-label-md font-bold flex items-center justify-center gap-2 shadow-sm transition-colors">
+<span class="material-symbols-outlined text-[18px]">history</span>
+<span class="">Undo Collected • Return to Rack</span>
+</button>
+</div>
+<!-- Card 4.2: Historical Record Item -->
+<div class="bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-xs opacity-75">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">Token #3108</span>
+<span class="font-code-sm text-code-sm text-on-surface-variant">10:02 AM</span>
+</div>
+<div class="flex justify-between font-body-sm text-body-sm text-on-surface-variant">
+<span class="">Meena S. • 2 pgs Color</span>
+<span class="font-bold text-tertiary-container">PAID UPI ₹20.00</span>
+</div>
+<span class="font-code-sm text-code-sm text-outline">Archived to Daily Register</span>
+</div>
+<!-- Quick Hardware Status Widget -->
+<div class="mt-space-md bg-surface-container-lowest p-space-md rounded shadow-sm flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-lg text-label-lg font-bold text-on-surface">CONNECTED PRINTERS</span>
+<span class="w-2 h-2 rounded-full bg-tertiary-fixed"></span>
+</div>
+<div class="flex flex-col gap-2 font-code-sm text-code-sm">
+<div class="flex justify-between items-center">
+<span class="text-on-surface">1. Canon IR-2525 (B/W)</span>
+<span class="text-tertiary-container font-bold">READY (Tray: 420 sh)</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-on-surface">2. HP Laser Pro 500 (Color)</span>
+<span class="text-tertiary-container font-bold">READY (Toner: 68%)</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Persistent Glanceable Stats Strip -->
+<div class="sticky bottom-0 left-0 right-0 bg-surface-container-lowest shadow-xl p-space-md mt-space-md z-30">
+<div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-space-md">
+<!-- Metrics Badges -->
+<div class="flex flex-wrap items-center gap-space-md">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant font-bold">TOTAL JOBS TODAY</span>
+<span class="font-headline-lg text-headline-lg font-bold text-on-surface font-code-sm">142</span>
+</div>
+<div class="h-8 w-px bg-surface-container"></div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant font-bold">B/W PAGES</span>
+<span class="font-headline-lg text-headline-lg font-bold text-on-surface font-code-sm">1,840</span>
+</div>
+<div class="h-8 w-px bg-surface-container"></div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant font-bold">COLOR PAGES</span>
+<span class="font-headline-lg text-headline-lg font-bold text-secondary font-code-sm">210</span>
+</div>
+<div class="h-8 w-px bg-surface-container"></div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant font-bold">AVG COUNTER SPEED</span>
+<div class="flex items-center gap-1">
+<span class="font-headline-lg text-headline-lg font-bold text-tertiary-container font-code-sm">42s</span>
+<span class="material-symbols-outlined text-[16px] text-tertiary-fixed-variant">trending_down</span>
+</div>
+</div>
+<div class="h-8 w-px bg-surface-container"></div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant font-bold">WHATSAPP SAVED</span>
+<span class="font-headline-lg text-headline-lg font-bold text-on-surface font-code-sm">142 files</span>
+</div>
+</div>
+<!-- Quick Action: Walk-in Job Fast Launcher -->
+<div class="flex items-center gap-space-sm">
+<button class="px-space-md py-2.5 bg-surface-container-high hover:bg-surface-container text-on-surface rounded font-label-lg text-label-lg font-bold flex items-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[18px]">receipt_long</span>
+<span class="">Day End Summary</span>
+</button>
+<button class="px-space-lg py-2.5 bg-secondary hover:bg-secondary-container text-on-secondary rounded font-label-lg text-label-lg font-bold flex items-center gap-2 shadow-sm transition-transform active:scale-[0.98]">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+<span class="">New Walk-in Order [W]</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Inline Dashboard Keyboard Control Logic -->
+<script>
+    document.addEventListener('keydown', function(e) {
+      // Avoid firing when typing in an input
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        if (e.key === 'Escape') {
+          document.activeElement.blur();
+        }
+        return;
+      }
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const searchInput = document.getElementById('queueSearchInput');
+        if (searchInput) searchInput.focus();
+      } else if (e.key.toLowerCase() === 'n') {
+        // Next Oldest
+        console.log("Keyboard Action: Claiming Next Oldest Job");
+      } else if (e.key.toLowerCase() === 'r') {
+        // Mark Ready
+        console.log("Keyboard Action: Marking Active Job Ready");
+      } else if (e.key.toLowerCase() === 'c') {
+        // Mark Collected
+        console.log("Keyboard Action: Dispense and Handover");
+      }
+    });
+
+    const pauseBtn = document.getElementById('btnPauseIntake');
+    const toast = document.getElementById('toastNotification');
+    if (pauseBtn && toast) {
+      pauseBtn.addEventListener('click', function() {
+        toast.classList.toggle('hidden');
+      });
+    }
+
+    const rushBtn = document.getElementById('btnRushMode');
+    if (rushBtn) {
+      rushBtn.addEventListener('click', function() {
+        const isRush = rushBtn.classList.contains('bg-error');
+        if (isRush) {
+          rushBtn.className = "px-space-sm py-2 bg-surface-container-low hover:bg-surface-container text-on-surface rounded font-label-lg text-label-lg flex items-center gap-1.5 transition-colors";
+          rushBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">bolt</span><span>RUSH MODE: OFF</span>';
+        } else {
+          rushBtn.className = "px-space-sm py-2 bg-error text-on-error rounded font-label-lg text-label-lg flex items-center gap-1.5 shadow-sm";
+          rushBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: \'FILL\' 1;">bolt</span><span>RUSH MODE: ON</span>';
+        }
+      });
+    }
+  </script>
+<div id="audioChimeModal" class="fixed inset-0 z-50 bg-[#0b1c30]/70 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modalAudioTitle"><div class="bg-surface-container-lowest text-on-surface w-full max-w-3xl rounded shadow-xl flex flex-col border border-outline-variant overflow-hidden"><div class="bg-primary-container text-on-primary p-space-md flex items-start justify-between gap-space-md border-b border-inverse-surface"><div class="flex items-start gap-space-sm"><div class="w-11 h-11 rounded bg-secondary flex items-center justify-center text-on-secondary shadow-sm"><span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">campaign</span></div><div class="flex flex-col"><div class="flex items-center gap-2 flex-wrap"><h2 id="modalAudioTitle" class="font-headline-md text-headline-md font-bold text-on-primary leading-tight">Public Audio Announcement &amp; Chime Trigger</h2><span class="px-2 py-0.5 bg-tertiary-container text-on-tertiary-container rounded font-code-sm text-code-sm font-bold">PA NODE 01 • ONLINE (84 dB SPL)</span></div><p class="font-body-sm text-body-sm text-on-primary-container mt-1">Broadcast immediate chime tone and multilingual token callout to station speakers and TV screen</p></div></div><button class="w-9 h-9 flex items-center justify-center rounded bg-inverse-surface hover:bg-black text-on-primary transition-colors" onclick="document.getElementById('audioChimeModal').classList.add('hidden')" aria-label="Close Modal"><span class="material-symbols-outlined text-[20px]">close</span></button></div><div class="p-space-md flex flex-col gap-space-md overflow-y-auto max-h-[75vh]"><div class="flex flex-col gap-2 p-space-sm bg-surface-container-low rounded border border-outline-variant"><div class="flex items-center justify-between"><span class="font-label-md text-label-md font-bold uppercase tracking-wider text-secondary flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">fast_forward</span>Quick Token Audio Dispatch</span><span class="px-2 py-0.5 bg-tertiary-container text-on-tertiary-container rounded font-code-sm text-[11px] font-bold tracking-wide">⚡ HOTKEYS: [1] [2] [3] INSTANT BROADCAST</span></div><div class="grid grid-cols-1 md:grid-cols-3 gap-2"><button class="p-2.5 bg-surface-container-lowest hover:bg-surface-container text-on-surface rounded flex flex-col items-start gap-1.5 text-left border-2 border-secondary shadow-sm transition-colors"><div class="flex items-center justify-between w-full"><div class="flex items-center gap-1.5"><kbd class="px-2 py-0.5 bg-primary text-on-primary font-code-sm font-bold rounded text-code-sm">[1]</kbd><span class="font-token-display-mobile text-headline-sm font-bold text-on-surface leading-tight">🔊 Call A-07</span></div><span class="px-1.5 py-0.5 bg-secondary-container text-on-secondary-container rounded font-code-sm text-[11px] font-bold">WAITING PICKUP</span></div><div class="flex flex-col w-full"><span class="font-body-sm text-body-sm font-bold text-on-surface truncate">Priya M. • Desk 1 • Lane A</span><span class="font-code-sm text-[11px] text-secondary font-bold">Press 1 to announce</span></div></button><button class="p-2.5 bg-surface-container-lowest hover:bg-surface-container text-on-surface rounded flex flex-col items-start gap-1.5 text-left border border-outline-variant shadow-sm transition-colors"><div class="flex items-center justify-between w-full"><div class="flex items-center gap-1.5"><kbd class="px-2 py-0.5 bg-primary text-on-primary font-code-sm font-bold rounded text-code-sm">[2]</kbd><span class="font-token-display-mobile text-headline-sm font-bold text-on-surface leading-tight">🔊 Call A-05</span></div><span class="px-1.5 py-0.5 bg-primary text-on-primary rounded font-code-sm text-[11px] font-bold">READY</span></div><div class="flex flex-col w-full"><span class="font-body-sm text-body-sm font-bold text-on-surface truncate">Sunita P. • Tray 1 • 3 Docs</span><span class="font-code-sm text-[11px] text-on-surface-variant font-bold">Press 2 to announce</span></div></button><button class="p-2.5 bg-surface-container-lowest hover:bg-surface-container text-on-surface rounded flex flex-col items-start gap-1.5 text-left border border-outline-variant shadow-sm transition-colors"><div class="flex items-center justify-between w-full"><div class="flex items-center gap-1.5"><kbd class="px-2 py-0.5 bg-primary text-on-primary font-code-sm font-bold rounded text-code-sm">[3]</kbd><span class="font-token-display-mobile text-headline-sm font-bold text-secondary leading-tight">🔊 Call #8819</span></div><span class="px-1.5 py-0.5 bg-tertiary-container text-on-tertiary-container rounded font-code-sm text-[11px] font-bold">PREPAID</span></div><div class="flex flex-col w-full"><span class="font-body-sm text-body-sm font-bold text-on-surface truncate">Vikram S. • Tray 03 • WhatsApp</span><span class="font-code-sm text-[11px] text-on-surface-variant font-bold">Press 3 to announce</span></div></button></div><div class="pt-2 border-t border-outline-variant flex flex-col md:flex-row items-stretch md:items-center gap-2"><div class="flex items-center gap-1.5 flex-1 min-w-0"><div class="relative flex-1"><span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">tag</span><input type="text" value="A-07" class="w-full h-10 pl-8 pr-2 bg-surface-container-lowest text-on-surface font-code-sm text-code-sm font-bold rounded border border-outline-variant outline-none focus:border-secondary uppercase" placeholder="Token ID"></div><select class="h-10 px-2 bg-surface-container-lowest text-on-surface font-body-sm text-body-sm rounded border border-outline-variant outline-none font-bold"><option selected="selected">Counter Desk 1</option><option>Counter Desk 2</option><option>Dispense Rack 3</option></select><select class="h-10 px-2 bg-surface-container-lowest text-on-surface font-body-sm text-body-sm rounded border border-outline-variant outline-none font-bold"><option selected="selected">Tray 1</option><option>Tray 2</option><option>Tray 3</option><option>No Rack (Counter Handover)</option></select></div><button class="h-10 px-space-md bg-primary hover:bg-inverse-surface text-on-primary rounded font-label-md text-label-md font-bold flex items-center justify-center gap-1.5 shadow-sm whitespace-nowrap"><span class="material-symbols-outlined text-[18px] text-tertiary-fixed">volume_up</span><span class="">Broadcast Chime + Voice</span></button></div></div><div class="p-space-sm bg-surface-container-low rounded border border-outline-variant flex flex-col gap-space-xs"><div class="flex items-center justify-between"><span class="font-label-md text-label-md font-bold uppercase tracking-wider text-on-surface-variant">Instant PA Quick-Page Presets</span><span class="font-code-sm text-code-sm text-outline">One-touch emergency broadcasts</span></div><div class="grid grid-cols-1 md:grid-cols-3 gap-space-xs"><button class="p-space-sm bg-surface-container-lowest hover:bg-surface-container text-left rounded border border-outline-variant shadow-sm flex flex-col gap-1 transition-colors"><div class="flex items-center justify-between w-full"><div class="flex items-center gap-1.5"><kbd class="px-2 py-0.5 bg-primary text-on-primary font-code-sm font-bold rounded text-code-sm">[F1]</kbd><span class="font-headline-sm text-headline-sm font-bold text-on-surface">Unresponsive Call</span></div><span class="px-1.5 py-0.5 bg-error-container text-on-error-container rounded font-code-sm text-[11px] font-bold">RE-ALERT</span></div><p class="font-body-sm text-body-sm text-on-surface-variant leading-tight mt-0.5">"Customer for token A-05, please collect at Desk 1"</p></button><button class="p-space-sm bg-surface-container-lowest hover:bg-surface-container text-left rounded border border-outline-variant shadow-sm flex flex-col gap-1 transition-colors"><div class="flex items-center justify-between w-full"><div class="flex items-center gap-1.5"><kbd class="px-2 py-0.5 bg-primary text-on-primary font-code-sm font-bold rounded text-code-sm">[F2]</kbd><span class="font-headline-sm text-headline-sm font-bold text-on-surface">Desk 2 Opened</span></div><span class="px-1.5 py-0.5 bg-secondary-fixed text-on-secondary-fixed rounded font-code-sm text-[11px] font-bold">DIVERT</span></div><p class="font-body-sm text-body-sm text-on-surface-variant leading-tight mt-0.5">"Tokens above 20 proceed to Counter 2"</p></button><button class="p-space-sm bg-surface-container-lowest hover:bg-surface-container text-left rounded border border-outline-variant shadow-sm flex flex-col gap-1 transition-colors"><div class="flex items-center justify-between w-full"><div class="flex items-center gap-1.5"><kbd class="px-2 py-0.5 bg-primary text-on-primary font-code-sm font-bold rounded text-code-sm">[F3]</kbd><span class="font-headline-sm text-headline-sm font-bold text-on-surface">Pause 3-Min</span></div><span class="px-1.5 py-0.5 bg-surface-container-high text-on-surface rounded font-code-sm text-[11px] font-bold">HOLD</span></div><p class="font-body-sm text-body-sm text-on-surface-variant leading-tight mt-0.5">"Paper refill pause. Next call in 3 mins"</p></button></div></div><div class="flex flex-col gap-2"><span class="font-label-md text-label-md font-bold uppercase tracking-wider text-on-surface-variant">Instant PA Quick-Page Presets</span><div class="grid grid-cols-1 md:grid-cols-3 gap-space-xs"><button class="p-space-sm bg-surface-container-lowest hover:bg-surface-container text-left rounded border border-outline-variant shadow-sm flex flex-col gap-1 transition-colors"><div class="flex items-center justify-between w-full"><div class="flex items-center gap-1.5"><kbd class="px-2 py-0.5 bg-surface-container-lowest text-primary font-code-sm font-bold rounded border border-outline-variant shadow-sm text-code-sm">KEY [1]</kbd><span class="font-token-display-mobile text-headline-sm font-bold leading-tight">🔊 Call A-07</span></div><span class="px-1.5 py-0.5 bg-secondary-container text-on-secondary-container rounded font-code-sm text-[11px] font-bold">LANE A</span></div><div class="flex items-center justify-between w-full mt-0.5"><span class="font-body-sm text-body-sm text-on-secondary truncate">Priya M. • 2 files (16 pgs)</span><span class="font-code-sm text-[11px] text-on-secondary opacity-75 shrink-0">Press 1 to announce</span></div></button><button class="p-space-sm bg-surface-container-lowest hover:bg-surface-container text-left rounded border border-outline-variant shadow-sm flex flex-col gap-1 transition-colors"><div class="flex items-center justify-between w-full"><div class="flex items-center gap-1.5"><kbd class="px-2 py-0.5 bg-surface-container-lowest text-primary font-code-sm font-bold rounded border border-outline-variant shadow-sm text-code-sm">KEY [2]</kbd><span class="font-token-display-mobile text-headline-sm font-bold text-on-surface leading-tight">🔊 Call A-05</span></div><span class="px-1.5 py-0.5 bg-primary text-on-primary rounded font-code-sm text-[11px] font-bold">TRAY 1</span></div><div class="flex items-center justify-between w-full mt-0.5"><span class="font-body-sm text-body-sm text-on-surface-variant truncate">Sunita P. • ₹12 Unpaid</span><span class="font-code-sm text-[11px] text-on-surface-variant shrink-0">Press 2 to announce</span></div></button><button class="p-space-sm bg-surface-container-lowest hover:bg-surface-container text-left rounded border border-outline-variant shadow-sm flex flex-col gap-1 transition-colors"><div class="flex items-center justify-between w-full"><div class="flex items-center gap-1.5"><kbd class="px-2 py-0.5 bg-surface-container-lowest text-primary font-code-sm font-bold rounded border border-outline-variant shadow-sm text-code-sm">KEY [3]</kbd><span class="font-token-display-mobile text-headline-sm font-bold text-secondary leading-tight">🔊 Call #8819</span></div><span class="px-1.5 py-0.5 bg-tertiary-container text-on-tertiary-container rounded font-code-sm text-[11px] font-bold">PREPAID</span></div><div class="flex items-center justify-between w-full mt-0.5"><span class="font-body-sm text-body-sm text-on-surface-variant truncate">Vikram S. • Tray 3 Ready</span><span class="font-code-sm text-[11px] text-on-surface-variant shrink-0">Press 3 to announce</span></div></button></div></div><div class="p-space-sm bg-surface-container rounded border border-outline-variant flex flex-col gap-space-xs"><div class="flex items-center justify-between flex-wrap gap-2"><span class="font-label-md text-label-md font-bold text-on-surface uppercase tracking-wide">Audio Output &amp; Language Routing</span><div class="flex items-center gap-1 font-code-sm text-code-sm text-on-surface-variant bg-surface-container-lowest px-2 py-0.5 rounded border border-outline-variant"><span class="material-symbols-outlined text-[16px] text-secondary">translate</span><span class="font-bold">Spoken: 1st English → 2nd Marathi (मराठी)</span></div></div><div class="flex flex-wrap items-center justify-between gap-space-md pt-1"><div class="flex items-center gap-space-sm flex-wrap"><label class="flex items-center gap-1.5 font-label-md text-label-md cursor-pointer"><input type="checkbox" checked="checked" class="w-4 h-4 rounded text-secondary border-outline"><span class="font-bold text-on-surface">TV Overhead (HDMI ARC)</span></label><label class="flex items-center gap-1.5 font-label-md text-label-md cursor-pointer"><input type="checkbox" checked="checked" class="w-4 h-4 rounded text-secondary border-outline"><span class="font-bold text-on-surface">Counter Soundbar (USB)</span></label><label class="flex items-center gap-1.5 font-label-md text-label-md cursor-pointer"><input type="checkbox" class="w-4 h-4 rounded text-secondary border-outline"><span class="text-on-surface-variant">Corridor Horn</span></label></div><div class="flex items-center gap-2 bg-surface-container-lowest px-space-sm py-1.5 rounded border border-outline-variant"><span class="font-code-sm text-code-sm text-on-surface-variant font-bold">PA GAIN:</span><div class="w-24 h-2 bg-surface-container-high rounded overflow-hidden"><div class="bg-secondary h-full w-[82%]"></div></div><span class="font-code-sm text-code-sm text-secondary font-bold">82% (+15dB Boost)</span></div></div></div></div><div class="p-space-md bg-surface-container-low border-t border-outline-variant flex items-center justify-between gap-space-md"><div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-tertiary-fixed"></span><span class="font-code-sm text-code-sm text-on-surface-variant font-bold">Audio Daemon in Sync • 4ms LAN hardwired</span></div><div class="flex items-center gap-space-xs"><button class="h-10 px-space-md bg-surface-container-lowest hover:bg-surface-container text-on-surface rounded font-label-md text-label-md font-bold border border-outline-variant" onclick="document.getElementById('audioChimeModal').classList.add('hidden')">Close [Esc]</button><button class="h-10 px-space-md bg-secondary hover:bg-secondary-container text-on-secondary rounded font-label-md text-label-md font-bold flex items-center gap-1.5 shadow-sm transition-transform active:scale-[0.98]"><span class="material-symbols-outlined text-[18px]">volume_up</span><span class="">Simulate Chime Test</span></button></div></div></div></div></div></main></div>
+
+</body></html>

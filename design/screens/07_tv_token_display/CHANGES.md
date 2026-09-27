@@ -1,0 +1,40 @@
+# Changes from the Stitch export (tv_waiting_area_token_display)
+
+- removed "Counter Matrix" (+0 up) — not in scope
+- removed "Chime History" (+0 up) — audio features moved to a later release
+- removed icon button "person" — TV is a read-only display
+- text: "Chime Alert:" → "Now ready:" (1x)
+- text: "announced for Counter Desk 1" → " is ready — please collect at Counter 1" (1x)
+- removed "Sunita P." (+0 up) — no names on the TV (FS-15.4)
+- removed "Vikram S." (+0 up) — no names on the TV (FS-15.4)
+- removed "S. Joshi" (+0 up) — no names on the TV (FS-15.4)
+- removed "Rahul M." (+0 up) — no names on the TV (FS-15.4)
+- removed "Priya N." (+0 up) — no names on the TV (FS-15.4)
+- removed "Amit K." (+0 up) — no names on the TV (FS-15.4)
+- removed block with "Rack Location" + "TRAY 1" — no racks
+- removed block with "Rack Location" + "TRAY 3" — no racks
+- text: "PAY ₹12" → "PAY AT COUNTER" (1x)
+- text: "Counter Desk 1" → "Counter 1" (1x)
+- text: "Remote Cloud Drop" → "Online order" (1x)
+- text: "PAID ONLINE" → "PREPAID" (1x)
+- text: "• 6 Pages • Direct Bagged" → "6 pages" (1x)
+- text: "Show QR at Counter 2" → "Show your pickup code at Counter 2" (1x)
+- text: "Rajesh K. • 12 pgs" → "Collected" (1x)
+- removed "Canon IR-2525" (+0 up) — printer names need the R2 agent
+- removed "HP Color 500" (+0 up) — printer names need the R2 agent
+- removed section "Progress representation using solid surfaces" — print progress needs the R2 agent
+- text: "Spooling Data" → "Printing" (1x)
+- removed block with "78% complete" + "25 of 32 pgs" — print progress needs the R2 agent
+- removed print progress bars (R2 agent)
+- removed icon button "person" — no names on the TV
+- removed icon button "contactless" — no names on the TV
+- text: "Remote Web" → "Online order" (1x)
+- text: "Station Walk-in" → "Walk-in" (1x)
+- text: "Dispatched 2m ago" → "Collected 2m ago" (1x)
+- text: "32 pgs Duplex" → "32 pgs both sides" (1x)
+- text: "PRINTER HEALTH:" → "COUNTERS OPEN:" (1x)
+- text: "100% READY" → "2" (1x)
+- text: "DPDP 2023 Compliant Spooler" → "Files deleted after pickup" (1x)
+- text: "Files auto-erased 10 min post-pickup • Zero data stored" → "Removed from Counter Drop 10 min after collection" (1x)
+- text: "Audio Chime Enabled" → "Chime on" (1x)
+- brand image → inline Counter Drop logo
