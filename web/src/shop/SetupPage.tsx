@@ -5,9 +5,10 @@ import { api, ApiError } from '@/lib/api'
 import { weakPin, WEAK_PIN_MSG } from '@/lib/pin'
 import { clock } from '@/lib/format'
 import type { SetupInfo, Shop, Staff } from '@/lib/types'
-import { Banner, Card, Chip, Logo, Spinner } from '@/components/ui'
+import { Banner, Card, Chip, Spinner } from '@/components/ui'
 import { PinPad } from '@/components/PinPad'
 import { useShopAuth, useShopTheme } from './auth'
+import { AuthLayout } from './AuthLayout'
 
 const HOLD = 'cd.setup.token' // survives a reload of this tab only; cleared once used
 
@@ -104,15 +105,7 @@ export default function SetupPage() {
   const del = useCallback(() => setPin((p) => p.slice(0, -1)), [])
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 px-4 py-8">
-      <div className="flex items-center gap-3">
-        <Logo size={48} />
-        <div>
-          <h1 className="text-2xl font-bold">Counter Drop</h1>
-          <p className="text-sm text-ink-muted">Set your PIN</p>
-        </div>
-      </div>
-
+    <AuthLayout subtitle="Set your PIN">
       {invalid ? (
         <Card className="space-y-3 p-5">
           <Banner tone="danger">{invalid}</Banner>
@@ -155,6 +148,6 @@ export default function SetupPage() {
           </p>
         </Card>
       )}
-    </div>
+    </AuthLayout>
   )
 }

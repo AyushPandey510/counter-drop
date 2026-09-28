@@ -15,7 +15,14 @@ const steps: { state: JobState; key: Key }[] = [
   { state: 'claimed', key: 'printing' },
   { state: 'ready', key: 'ready' },
 ]
-const order: Record<JobState, number> = { uploading: -1, queued: 0, claimed: 1, ready: 2, collected: 3, cancelled: -1 }
+const order: Record<JobState, number> = {
+  uploading: -1,
+  queued: 0,
+  claimed: 1,
+  ready: 2,
+  collected: 3,
+  cancelled: -1,
+}
 
 export default function TicketPage() {
   const { jobId = '' } = useParams()
@@ -45,7 +52,15 @@ export default function TicketPage() {
       setTicket(tk)
       setError('')
       const saved = findTicket(jobId)
-      if (!saved) saveTicket({ jobId, secret, slug: tk.shop.slug, shopName: tk.shop.name, token: tk.job.token, createdAt: Date.now() })
+      if (!saved)
+        saveTicket({
+          jobId,
+          secret,
+          slug: tk.shop.slug,
+          shopName: tk.shop.name,
+          token: tk.job.token,
+          createdAt: Date.now(),
+        })
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not load')
     }
@@ -121,102 +136,124 @@ export default function TicketPage() {
   }
 
   return (
-    <Shell shop={shop}>
+    <Shell shop={shop} wide>
       {error && <Banner tone="danger">{error}</Banner>}
+      <div className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+        <div className="space-y-3">
+          <section
+            aria-live="assertive"
+            className={`rounded border-2 p-5 text-center ${isReady ? 'border-ready bg-ready text-white' : isDone ? 'border-line bg-surface-tint text-ink-muted' : 'border-ink bg-ink text-canvas'}`}
+          >
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide opacity-80">
+              <span>{job.lane ? `Lane ${job.lane}` : ''}</span>
+              <span>{t('yourToken')}</span>
+            </div>
+            <div className="my-2 font-mono text-7xl font-bold tracking-tight lg:my-6 lg:text-8xl">{job.token ?? '—'}</div>
+            <p className="text-sm opacity-90">
+              {isReady ? t('readyNow', { token: job.token ?? '' }) : job.state === 'collected' ? t('doneCollected') : job.state === 'cancelled' ? t('doneCancelled') : t('showToken')}
+            </p>
+            {job.state === 'queued' && (
+              <div className="mt-3 rounded bg-surface px-3 py-2 text-left text-sm text-ink">
+                <div className="font-semibold">{ticket.position === 0 ? t('nextUp') : t('ahead', { n: ticket.position })}</div>
+                {job.readyBy && <div className="text-ink-muted">{t('readyBy', { time: clock(job.readyBy) })}</div>}
+              </div>
+            )}
+          </section>
 
-      <section aria-live="assertive" className={`rounded border-2 p-5 text-center ${isReady ? 'border-ready bg-ready text-white' : isDone ? 'border-line bg-surface-tint text-ink-muted' : 'border-ink bg-ink text-canvas'}`}>
-        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide opacity-80">
-          <span>{job.lane ? `Lane ${job.lane}` : ''}</span>
-          <span>{t('yourToken')}</span>
+          {job.state !== 'cancelled' && (
+            <Card className="p-4">
+              <ol className="flex items-start justify-between" aria-label="Status">
+                {steps.map((s, i) => {
+                  const done = idx > i || job.state === 'collected'
+                  const active = idx === i
+                  const { Icon } = stateMeta[s.state]
+                  return (
+                    <li key={s.state} className="flex flex-1 flex-col items-center text-center">
+                      <span className={`flex h-10 w-10 items-center justify-center rounded-full ${done ? 'bg-ready text-white' : active ? 'bg-action text-white' : 'bg-surface-tint text-ink-subtle'}`}>
+                        {done ? <Check className="h-5 w-5" aria-hidden /> : <Icon className="h-5 w-5" aria-hidden />}
+                      </span>
+                      <span className={`mt-1 text-sm font-semibold ${active ? 'text-action' : done ? 'text-ready' : 'text-ink-subtle'}`}>{t(s.key)}</span>
+                    </li>
+                  )
+                })}
+              </ol>
+            </Card>
+          )}
+
+          {(job.state === 'queued' || job.state === 'claimed') && (
+            <button
+              type="button"
+              onClick={() => {
+                setSoundOn(true)
+                chime('soft')
+              }}
+              className="flex w-full items-center gap-3 rounded border-[1.5px] border-line bg-surface-tint p-3 text-left text-sm"
+            >
+              <BellRing className="h-5 w-5 text-action" aria-hidden />
+              <span className="flex-1">{soundOn ? t('soundReady') : t('soundOn')}</span>
+            </button>
+          )}
+
+          {job.state === 'claimed' && (
+            <p className="flex items-center gap-2 rounded border-[1.5px] border-line bg-surface p-3 text-sm text-ink-muted">
+              <Lock className="h-4 w-4 text-attention" aria-hidden /> {t('locked2')}
+            </p>
+          )}
         </div>
-        <div className="my-2 font-mono text-7xl font-bold tracking-tight">{job.token ?? '—'}</div>
-        <p className="text-sm opacity-90">{isReady ? t('readyNow', { token: job.token ?? '' }) : job.state === 'collected' ? t('doneCollected') : job.state === 'cancelled' ? t('doneCancelled') : t('showToken')}</p>
-        {job.state === 'queued' && (
-          <div className="mt-3 rounded bg-surface px-3 py-2 text-left text-sm text-ink">
-            <div className="font-semibold">{ticket.position === 0 ? t('nextUp') : t('ahead', { n: ticket.position })}</div>
-            {job.readyBy && <div className="text-ink-muted">{t('readyBy', { time: clock(job.readyBy) })}</div>}
-          </div>
-        )}
-      </section>
+        <div className="space-y-3">
+          {quote && job.state !== 'cancelled' && (
+            <Card className="p-4">
+              <div className="flex items-end justify-between">
+                <div>
+                  <div className="text-sm text-ink-muted">{job.state === 'collected' ? t('total') : job.pagesToConfirm ? t('priceAtCounter') : t('due')}</div>
+                  <div className="font-mono text-2xl font-bold tabular">{rupees(job.priceTotalPaise || quote.totalPaise)}</div>
+                </div>
+                <div className="text-right text-sm text-ink-muted">
+                  {job.files.length} × <span className="font-mono">{job.pagesTotal || quote.pagesTotal}</span> pp
+                </div>
+              </div>
+            </Card>
+          )}
 
-      {job.state !== 'cancelled' && (
-        <Card className="p-4">
-          <ol className="flex items-start justify-between" aria-label="Status">
-            {steps.map((s, i) => {
-              const done = idx > i || job.state === 'collected'
-              const active = idx === i
-              const { Icon } = stateMeta[s.state]
-              return (
-                <li key={s.state} className="flex flex-1 flex-col items-center text-center">
-                  <span className={`flex h-10 w-10 items-center justify-center rounded-full ${done ? 'bg-ready text-white' : active ? 'bg-action text-white' : 'bg-surface-tint text-ink-subtle'}`}>
-                    {done ? <Check className="h-5 w-5" aria-hidden /> : <Icon className="h-5 w-5" aria-hidden />}
-                  </span>
-                  <span className={`mt-1 text-sm font-semibold ${active ? 'text-action' : done ? 'text-ready' : 'text-ink-subtle'}`}>{t(s.key)}</span>
-                </li>
-              )
-            })}
-          </ol>
-        </Card>
-      )}
-
-      {(job.state === 'queued' || job.state === 'claimed') && (
-        <button type="button" onClick={() => { setSoundOn(true); chime('soft') }} className="flex w-full items-center gap-3 rounded border-[1.5px] border-line bg-surface-tint p-3 text-left text-sm">
-          <BellRing className="h-5 w-5 text-action" aria-hidden />
-          <span className="flex-1">{soundOn ? t('soundReady') : t('soundOn')}</span>
-        </button>
-      )}
-
-      {quote && job.state !== 'cancelled' && (
-        <Card className="p-4">
-          <div className="flex items-end justify-between">
-            <div>
-              <div className="text-sm text-ink-muted">{job.state === 'collected' ? t('total') : job.pagesToConfirm ? t('priceAtCounter') : t('due')}</div>
-              <div className="font-mono text-2xl font-bold tabular">{rupees(job.priceTotalPaise || quote.totalPaise)}</div>
-            </div>
-            <div className="text-right text-sm text-ink-muted">
-              {job.files.length} × <span className="font-mono">{job.pagesTotal || quote.pagesTotal}</span> pp
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {job.state === 'claimed' && (
-        <p className="flex items-center gap-2 rounded border-[1.5px] border-line bg-surface p-3 text-sm text-ink-muted">
-          <Lock className="h-4 w-4 text-attention" aria-hidden /> {t('locked2')}
-        </p>
-      )}
-      {(job.state === 'queued' || job.state === 'uploading') && (
-        <Button variant="danger" className="w-full" onClick={cancel}>
-          {t('cancel')}
-        </Button>
-      )}
-
-      {(job.state === 'collected' || job.state === 'cancelled') && (
-        <Card className="p-4">
-          <h2 className="mb-2 flex items-center gap-2 text-lg font-bold">
-            <ShieldCheck className="h-6 w-6 text-ready" aria-hidden /> {t('receipt')}
-          </h2>
-          {job.state === 'collected' && job.collectedAt && <p className="text-sm text-ink-muted">{t('collectedAt', { time: clock(job.collectedAt) })}</p>}
-          {job.state === 'cancelled' && <p className="text-sm text-ink-muted">{t('cancelledNote')}</p>}
-          {job.filesDeletedAt ? (
-            <p className="mt-2 font-semibold text-ready">{t(filesCount === 1 ? 'deletedAt1' : 'deletedAt', { n: filesCount, time: clock(job.filesDeletedAt) })}</p>
-          ) : deleteAt ? (
-            <p className="mt-2 font-semibold">{t('deleteIn', { time: mmss(deleteAt - serverNow) })}</p>
-          ) : null}
-          {job.filesDeletedAt && (
-            <Button variant="secondary" size="sm" className="mt-3" onClick={share}>
-              <Share2 className="h-4 w-4" aria-hidden /> {t('shareReceipt')}
+          {(job.state === 'queued' || job.state === 'uploading') && (
+            <Button variant="danger" className="w-full" onClick={cancel}>
+              {t('cancel')}
             </Button>
           )}
-        </Card>
-      )}
 
-      {(job.state === 'collected' || job.state === 'cancelled') && (
-        <Link to={`/s/${shop.slug}`} className="block text-center font-semibold text-action underline">
-          {t('newJob')}
-        </Link>
-      )}
-      <p className="pb-6 text-center text-xs text-ink-muted">{t('help')}</p>
+          {(job.state === 'collected' || job.state === 'cancelled') && (
+            <Card className="p-4">
+              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold">
+                <ShieldCheck className="h-6 w-6 text-ready" aria-hidden /> {t('receipt')}
+              </h2>
+              {job.state === 'collected' && job.collectedAt && <p className="text-sm text-ink-muted">{t('collectedAt', { time: clock(job.collectedAt) })}</p>}
+              {job.state === 'cancelled' && <p className="text-sm text-ink-muted">{t('cancelledNote')}</p>}
+              {job.filesDeletedAt ? (
+                <p className="mt-2 font-semibold text-ready">
+                  {t(filesCount === 1 ? 'deletedAt1' : 'deletedAt', {
+                    n: filesCount,
+                    time: clock(job.filesDeletedAt),
+                  })}
+                </p>
+              ) : deleteAt ? (
+                <p className="mt-2 font-semibold">{t('deleteIn', { time: mmss(deleteAt - serverNow) })}</p>
+              ) : null}
+              {job.filesDeletedAt && (
+                <Button variant="secondary" size="sm" className="mt-3" onClick={share}>
+                  <Share2 className="h-4 w-4" aria-hidden /> {t('shareReceipt')}
+                </Button>
+              )}
+            </Card>
+          )}
+
+          {(job.state === 'collected' || job.state === 'cancelled') && (
+            <Link to={`/s/${shop.slug}`} className="block text-center font-semibold text-action underline">
+              {t('newJob')}
+            </Link>
+          )}
+          <p className="pb-6 lg:text-left text-center text-xs text-ink-muted">{t('help')}</p>
+        </div>
+      </div>
     </Shell>
   )
 }

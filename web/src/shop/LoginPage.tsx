@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { api, ApiError, store } from '@/lib/api'
-import { Banner, Button, Card, Logo } from '@/components/ui'
+import { Banner, Button, Card } from '@/components/ui'
 import { PinPad } from '@/components/PinPad'
 import { useShopAuth, useShopTheme } from './auth'
+import { AuthLayout } from './AuthLayout'
 
 // Staff sign-in: shop link name → name tile → 4-digit PIN (FSD SCR-S02, R1a without phone OTP).
 export default function LoginPage() {
@@ -59,14 +60,7 @@ export default function LoginPage() {
   if (session) return <Navigate to="/shop" replace />
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 px-4 py-8">
-      <div className="flex items-center gap-3">
-        <Logo size={48} />
-        <div>
-          <h1 className="text-2xl font-bold">Counter Drop</h1>
-          <p className="text-sm text-ink-muted">Shop sign in</p>
-        </div>
-      </div>
+    <AuthLayout subtitle="Shop sign in">
       {error && <Banner tone="danger">{error}</Banner>}
 
       {!shop ? (
@@ -80,8 +74,18 @@ export default function LoginPage() {
             <label htmlFor="slug" className="block font-semibold">
               Shop link name
             </label>
-            <input id="slug" value={slug} onChange={(e) => setSlug(e.target.value)} autoCapitalize="none" autoCorrect="off" placeholder="imran-xerox" className="mt-2 h-12 w-full rounded border-[1.5px] border-line bg-surface px-3 font-mono" />
-            <p className="mt-1 text-xs text-ink-muted">The name in your shop's QR link: …/s/<b>your-shop</b></p>
+            <input
+              id="slug"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              autoCapitalize="none"
+              autoCorrect="off"
+              placeholder="imran-xerox"
+              className="mt-2 h-12 w-full rounded border-[1.5px] border-line bg-surface px-3 font-mono"
+            />
+            <p className="mt-1 text-xs text-ink-muted">
+              The name in your shop's QR link: …/s/<b>your-shop</b>
+            </p>
             <p className="mt-2 text-xs text-ink-muted">First time? Open the one-time setup link you were sent to choose your PIN.</p>
             <Button className="mt-3 w-full" type="submit" disabled={!slug.trim()}>
               Continue
@@ -125,6 +129,6 @@ export default function LoginPage() {
           <p className="mt-3 text-center text-xs text-ink-muted">Forgot your PIN? Ask the shop owner for a new PIN link.</p>
         </Card>
       )}
-    </div>
+    </AuthLayout>
   )
 }

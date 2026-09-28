@@ -39,10 +39,15 @@ export default function DropPage() {
   const [files, setFiles] = useState<LocalFile[]>([])
   const [job, setJob] = useState<{ id: string; secret: string } | null>(null)
   const [ticket, setTicket] = useState<Ticket | null>(null)
-  const [settings, setSettings] = useState<FileSettings>({ copies: 1, colour: false, bothSides: false })
+  const [settings, setSettings] = useState<FileSettings>({
+    copies: 1,
+    colour: false,
+    bothSides: false,
+  })
   const [name, setName] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
+  const [dragging, setDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const jobRef = useRef(job)
   jobRef.current = job
@@ -81,7 +86,10 @@ export default function DropPage() {
       patchFile(lf.clientId, { status: 'done', progress: 1 })
       setTicket(tk)
     } catch (e) {
-      patchFile(lf.clientId, { status: 'error', error: e instanceof ApiError ? e.message : t('uploadFailed') })
+      patchFile(lf.clientId, {
+        status: 'error',
+        error: e instanceof ApiError ? e.message : t('uploadFailed'),
+      })
     }
   }
 
@@ -105,7 +113,15 @@ export default function DropPage() {
         setError(`${file.name} is ${bytes(file.size)}. The limit is ${MAX_FILE_MB} MB.`)
         continue
       }
-      fresh.push({ clientId: nextId(), file, mime, pages: mime.startsWith('image/') ? 1 : 0, status: 'checking', progress: 0, pageRange: '' })
+      fresh.push({
+        clientId: nextId(),
+        file,
+        mime,
+        pages: mime.startsWith('image/') ? 1 : 0,
+        status: 'checking',
+        progress: 0,
+        pageRange: '',
+      })
     }
     const total = [...existing, ...fresh].reduce((s, f) => s + f.file.size, 0)
     if (total > MAX_JOB_MB * 1024 * 1024) {
@@ -129,19 +145,34 @@ export default function DropPage() {
     )
     const toSend = fresh.filter((f) => f.status !== 'locked')
     if (toSend.length === 0) return
-    const meta = toSend.map((f) => ({ clientId: f.clientId, filename: f.file.name, size: f.file.size, mime: f.mime }))
+    const meta = toSend.map((f) => ({
+      clientId: f.clientId,
+      filename: f.file.name,
+      size: f.file.size,
+      mime: f.mime,
+    }))
 
     try {
       let j = jobRef.current
       let uploads: UploadTarget[]
       if (!j) {
-        const res = await api<{ ticket: Ticket; secret: string; uploads: UploadTarget[] }>(`/shops/${slug}/jobs`, { body: { files: meta } })
+        const res = await api<{
+          ticket: Ticket
+          secret: string
+          uploads: UploadTarget[]
+        }>(`/shops/${slug}/jobs`, { body: { files: meta } })
         j = { id: res.ticket.job.id, secret: res.secret }
         setJob(j)
         setTicket(res.ticket)
         uploads = res.uploads
         if (settings.colour || settings.bothSides || settings.copies !== 1) {
-          api<Ticket>(`/jobs/${j.id}`, { method: 'PATCH', body: { applyToAll: settings }, secret: j.secret }).then(setTicket).catch(() => {})
+          api<Ticket>(`/jobs/${j.id}`, {
+            method: 'PATCH',
+            body: { applyToAll: settings },
+            secret: j.secret,
+          })
+            .then(setTicket)
+            .catch(() => {})
         }
       } else {
         const res = await api<{ ticket: Ticket; uploads: UploadTarget[] }>(`/jobs/${j.id}/files`, { body: { files: meta }, secret: j.secret })
@@ -172,7 +203,12 @@ export default function DropPage() {
     setFiles((fs) => fs.filter((f) => f.clientId !== lf.clientId))
     if (job && lf.fileId) {
       try {
-        setTicket(await api<Ticket>(`/jobs/${job.id}/files/${lf.fileId}`, { method: 'DELETE', secret: job.secret }))
+        setTicket(
+          await api<Ticket>(`/jobs/${job.id}/files/${lf.fileId}`, {
+            method: 'DELETE',
+            secret: job.secret,
+          }),
+        )
       } catch {
         /* the draft expires anyway */
       }
@@ -191,7 +227,13 @@ export default function DropPage() {
     setSettings(next)
     if (!job) return
     try {
-      setTicket(await api<Ticket>(`/jobs/${job.id}`, { method: 'PATCH', body: { applyToAll: next }, secret: job.secret }))
+      setTicket(
+        await api<Ticket>(`/jobs/${job.id}`, {
+          method: 'PATCH',
+          body: { applyToAll: next },
+          secret: job.secret,
+        }),
+      )
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not update settings')
     }
@@ -204,13 +246,22 @@ export default function DropPage() {
       setTicket(
         await api<Ticket>(`/jobs/${job.id}`, {
           method: 'PATCH',
-          body: { files: [{ fileId: lf.fileId, settings: { ...settings, pageRange: range } }] },
+          body: {
+            files: [
+              {
+                fileId: lf.fileId,
+                settings: { ...settings, pageRange: range },
+              },
+            ],
+          },
           secret: job.secret,
         }),
       )
       patchFile(lf.clientId, { error: undefined })
     } catch (e) {
-      patchFile(lf.clientId, { error: e instanceof ApiError ? e.message : 'Invalid pages' })
+      patchFile(lf.clientId, {
+        error: e instanceof ApiError ? e.message : 'Invalid pages',
+      })
     }
   }
 
@@ -223,8 +274,18 @@ export default function DropPage() {
     setSending(true)
     setError('')
     try {
-      const tk = await api<Ticket>(`/jobs/${job.id}/submit`, { body: { priceVersion: quote.priceVersion, customerName: name.trim() }, secret: job.secret })
-      saveTicket({ jobId: job.id, secret: job.secret, slug, shopName: shop?.name ?? '', token: tk.job.token, createdAt: Date.now() })
+      const tk = await api<Ticket>(`/jobs/${job.id}/submit`, {
+        body: { priceVersion: quote.priceVersion, customerName: name.trim() },
+        secret: job.secret,
+      })
+      saveTicket({
+        jobId: job.id,
+        secret: job.secret,
+        slug,
+        shopName: shop?.name ?? '',
+        token: tk.job.token,
+        createdAt: Date.now(),
+      })
       navigate(`/t/${job.id}`, { replace: true })
     } catch (e) {
       if (e instanceof ApiError && e.code === 'price_changed') {
@@ -259,8 +320,113 @@ export default function DropPage() {
   const blocked = shop.onlineState !== 'online'
   const p = shop.prices
 
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragging(false)
+    if (!blocked && !sending && e.dataTransfer.files.length) onPick(e.dataTransfer.files)
+  }
+  const dragProps = {
+    onDragOver: (e: React.DragEvent) => {
+      e.preventDefault()
+      if (!dragging) setDragging(true)
+    },
+    onDragLeave: (e: React.DragEvent) => {
+      if (e.currentTarget === e.target) setDragging(false)
+    },
+    onDrop,
+  }
+
+  const priceCard = (
+    <Card className="p-4">
+      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-muted">{t('price')}</h2>
+      {quote?.lines.map((l) => {
+        const f = files.find((x) => x.fileId === l.fileId)
+        if (!f) return null
+        return (
+          <div key={l.fileId} className="flex justify-between gap-3 py-1 text-sm">
+            <span className="truncate">
+              {f.file.name} · {l.unit === 'sheet' ? `${l.sheets} × ${rupees(l.unitPaise)}` : `${l.sides} × ${rupees(l.unitPaise)}`}
+              {l.copies > 1 ? ` × ${l.copies}` : ''}
+            </span>
+            <span className="font-mono tabular">{f.pages ? rupees(l.amountPaise) : '—'}</span>
+          </div>
+        )
+      })}
+      <div className="mt-2 flex items-end justify-between border-t border-divider pt-2">
+        <div>
+          <div className="font-mono text-2xl font-bold tabular">{quote ? rupees(quote.totalPaise) : '—'}</div>
+          <div className="text-xs text-ink-muted">{quote?.pagesToConfirm ? t('priceAtCounter') : t('payAtCounter')}</div>
+        </div>
+        <WaitChip shop={shop} />
+      </div>
+    </Card>
+  )
+
+  // Shop's rates, shown beside the drop zone on wide screens before any file is chosen.
+  const ratesCard = (
+    <Card className="p-4">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-muted">{t('price')}</h2>
+      <dl className="space-y-2 text-sm">
+        <div className="flex justify-between">
+          <dt>
+            {t('bw')} · {t('oneSide')}
+          </dt>
+          <dd className="font-mono tabular">{t('perSide', { p: rupees(p.bwOnePaise) })}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt>
+            {t('bw')} · {t('bothSides')}
+          </dt>
+          <dd className="font-mono tabular">{t('perSheet', { p: rupees(p.bwBothPaise || p.bwOnePaise * 2) })}</dd>
+        </div>
+        {shop.colourAvailable && (
+          <>
+            <div className="flex justify-between">
+              <dt>
+                {t('colour')} · {t('oneSide')}
+              </dt>
+              <dd className="font-mono tabular">{t('perSide', { p: rupees(p.colourOnePaise) })}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>
+                {t('colour')} · {t('bothSides')}
+              </dt>
+              <dd className="font-mono tabular">
+                {t('perSheet', {
+                  p: rupees(p.colourBothPaise || p.colourOnePaise * 2),
+                })}
+              </dd>
+            </div>
+          </>
+        )}
+      </dl>
+      <p className="mt-3 border-t border-divider pt-3 text-xs text-ink-muted">{t('payAtCounter')}</p>
+    </Card>
+  )
+
+  const privacy = (
+    <p className="flex gap-2 rounded bg-surface-tint p-3 text-sm text-ink-muted">
+      <ShieldCheck className="h-5 w-5 shrink-0 text-ready" aria-hidden /> {t('privacy')}
+    </p>
+  )
+
+  if (blocked) {
+    return (
+      <Shell shop={shop}>
+        <Card className="p-5 text-center">
+          <Clock className="mx-auto mb-2 h-8 w-8 text-attention" aria-hidden />
+          <p className="text-lg font-semibold">{shop.onlineState === 'paused' ? t('shopPaused') : t('shopOffline')}</p>
+          {shop.pauseMessage && <p className="mt-1 text-ink-muted">{shop.pauseMessage}</p>}
+          <Button variant="secondary" className="mt-4" onClick={loadShop}>
+            <RotateCw className="h-4 w-4" aria-hidden /> {t('checkAgain')}
+          </Button>
+        </Card>
+      </Shell>
+    )
+  }
+
   return (
-    <Shell shop={shop}>
+    <Shell shop={shop} wide>
       {openTicket && (
         <Banner
           action={
@@ -272,37 +438,40 @@ export default function DropPage() {
           {t('haveTicket', { token: openTicket.token ?? '' })}
         </Banner>
       )}
+      {!shop.isOpen && <Banner tone="attention">{t('shopClosed', { time: hhmm(shop.opensAt) })}</Banner>}
+      <input ref={inputRef} type="file" multiple accept={ACCEPTED} className="hidden" onChange={(e) => onPick(e.target.files).finally(() => (e.target.value = ''))} />
 
-      {blocked ? (
-        <Card className="p-5 text-center">
-          <Clock className="mx-auto mb-2 h-8 w-8 text-attention" aria-hidden />
-          <p className="text-lg font-semibold">{shop.onlineState === 'paused' ? t('shopPaused') : t('shopOffline')}</p>
-          {shop.pauseMessage && <p className="mt-1 text-ink-muted">{shop.pauseMessage}</p>}
-          <Button variant="secondary" className="mt-4" onClick={loadShop}>
-            <RotateCw className="h-4 w-4" aria-hidden /> {t('checkAgain')}
-          </Button>
-        </Card>
-      ) : (
-        <>
-          {!shop.isOpen && <Banner tone="attention">{t('shopClosed', { time: hhmm(shop.opensAt) })}</Banner>}
-
-          <input ref={inputRef} type="file" multiple accept={ACCEPTED} className="hidden" onChange={(e) => onPick(e.target.files).finally(() => (e.target.value = ''))} />
-
+      <div className="space-y-3 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6 lg:space-y-0">
+        {/* Left: files and settings */}
+        <div className="space-y-3" {...dragProps}>
           {files.length === 0 ? (
-            <button type="button" onClick={() => inputRef.current?.click()} className="flex w-full flex-col items-center gap-2 rounded border-2 border-dashed border-action bg-surface px-4 py-10 text-center hover:bg-surface-tint">
-              <span className="flex h-14 w-14 items-center justify-center rounded bg-surface-tint text-action">
-                <Plus className="h-8 w-8" aria-hidden />
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className={`flex w-full flex-col items-center gap-2 rounded border-2 border-dashed px-4 py-10 text-center hover:bg-surface-tint lg:py-24 ${dragging ? 'border-action bg-surface-tint' : 'border-action bg-surface'}`}
+            >
+              <span className="flex h-14 w-14 items-center justify-center rounded bg-surface-tint text-action lg:h-20 lg:w-20">
+                <Plus className="h-8 w-8 lg:h-10 lg:w-10" aria-hidden />
               </span>
-              <span className="text-xl font-bold">{t('chooseFiles')}</span>
+              <span className="text-xl font-bold lg:text-2xl">{t('chooseFiles')}</span>
+              <span className="hidden text-ink-muted lg:block">{t('dragHint')}</span>
               <span className="text-sm text-ink-muted">{t('fileTypes', { n: MAX_FILES, mb: MAX_JOB_MB })}</span>
             </button>
           ) : (
-            <div className="space-y-2">
+            <div className={`space-y-2 rounded ${dragging ? 'outline-dashed outline-2 outline-offset-4 outline-action' : ''}`}>
               {files.map((lf) => (
-                <FileRow key={lf.clientId} lf={lf} quote={quote?.lines.find((l) => l.fileId === lf.fileId)} onRemove={() => removeFile(lf)} onRetry={() => retryFile(lf)} onRange={(r) => setPageRange(lf, r)} />
+                <FileRow
+                  key={lf.clientId}
+                  lf={lf}
+                  quote={quote?.lines.find((l) => l.fileId === lf.fileId)}
+                  onRemove={() => removeFile(lf)}
+                  onRetry={() => retryFile(lf)}
+                  onRange={(r) => setPageRange(lf, r)}
+                />
               ))}
               <Button variant="secondary" className="w-full" onClick={() => inputRef.current?.click()} disabled={sending}>
                 <Plus className="h-5 w-5" aria-hidden /> {t('addMore')}
+                <span className="hidden font-normal text-ink-muted lg:inline">· {t('dragHint')}</span>
               </Button>
             </div>
           )}
@@ -310,19 +479,28 @@ export default function DropPage() {
           {error && <Banner tone="danger">{error}</Banner>}
 
           {files.length > 0 && (
-            <>
-              <Card className="space-y-4 p-4">
-                <div className="flex items-baseline justify-between">
-                  <h2 className="text-lg font-bold">{t('settings')}</h2>
-                  <span className="text-sm text-ink-muted">{t('forAllFiles')}</span>
-                </div>
+            <Card className="space-y-4 p-4">
+              <div className="flex items-baseline justify-between">
+                <h2 className="text-lg font-bold">{t('settings')}</h2>
+                <span className="text-sm text-ink-muted">{t('forAllFiles')}</span>
+              </div>
+              <div className="space-y-4 xl:grid xl:grid-cols-2 xl:gap-4 xl:space-y-0">
                 <Segmented
                   label={t('colour')}
                   value={settings.colour}
                   onChange={(v) => applySettings({ ...settings, colour: v })}
                   options={[
-                    { value: false, label: t('bw'), hint: t('perSide', { p: rupees(p.bwOnePaise) }) },
-                    { value: true, label: t('colour'), hint: shop.colourAvailable ? t('perSide', { p: rupees(p.colourOnePaise) }) : '—', disabled: !shop.colourAvailable },
+                    {
+                      value: false,
+                      label: t('bw'),
+                      hint: t('perSide', { p: rupees(p.bwOnePaise) }),
+                    },
+                    {
+                      value: true,
+                      label: t('colour'),
+                      hint: shop.colourAvailable ? t('perSide', { p: rupees(p.colourOnePaise) }) : '—',
+                      disabled: !shop.colourAvailable,
+                    },
                   ]}
                 />
                 <Segmented
@@ -331,64 +509,63 @@ export default function DropPage() {
                   onChange={(v) => applySettings({ ...settings, bothSides: v })}
                   options={[
                     { value: false, label: t('oneSide') },
-                    { value: true, label: t('bothSides'), hint: t('perSheet', { p: rupees(settings.colour ? p.colourBothPaise || p.colourOnePaise * 2 : p.bwBothPaise || p.bwOnePaise * 2) }) },
+                    {
+                      value: true,
+                      label: t('bothSides'),
+                      hint: t('perSheet', {
+                        p: rupees(settings.colour ? p.colourBothPaise || p.colourOnePaise * 2 : p.bwBothPaise || p.bwOnePaise * 2),
+                      }),
+                    },
                   ]}
                 />
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold">{t('copies')}</span>
-                  <Stepper label={t('copies')} value={settings.copies} onChange={(c) => applySettings({ ...settings, copies: c })} />
-                </div>
-              </Card>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold">{t('copies')}</span>
+                <Stepper label={t('copies')} value={settings.copies} onChange={(c) => applySettings({ ...settings, copies: c })} />
+              </div>
+            </Card>
+          )}
 
+          <div className="lg:hidden">{files.length === 0 && privacy}</div>
+        </div>
+
+        {/* Right (desktop) / below (phone): name, price and send */}
+        <aside className="space-y-3 lg:sticky lg:top-24">
+          {files.length === 0 ? (
+            <div className="hidden space-y-3 lg:block">
+              {ratesCard}
+              {privacy}
+            </div>
+          ) : (
+            <>
               <Card className="p-4">
                 <label htmlFor="name" className="block font-semibold">
                   {t('firstName')}
                 </label>
-                <input id="name" value={name} maxLength={20} autoComplete="given-name" onChange={(e) => setName(e.target.value)} className="mt-2 h-12 w-full rounded border-[1.5px] border-line bg-surface px-3 text-base focus:border-action focus:outline-none" placeholder="Priya" />
+                <input
+                  id="name"
+                  value={name}
+                  maxLength={20}
+                  autoComplete="given-name"
+                  onChange={(e) => setName(e.target.value)}
+                  className="mt-2 h-12 w-full rounded border-[1.5px] border-line bg-surface px-3 text-base focus:border-action focus:outline-none"
+                  placeholder="Priya"
+                />
                 <p className="mt-1 text-xs text-ink-muted">{t('firstNameHint')}</p>
               </Card>
-
-              <Card className="p-4">
-                <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-muted">{t('price')}</h2>
-                {quote?.lines.map((l) => {
-                  const f = files.find((x) => x.fileId === l.fileId)
-                  if (!f) return null
-                  return (
-                    <div key={l.fileId} className="flex justify-between gap-3 py-1 text-sm">
-                      <span className="truncate">
-                        {f.file.name} · {l.unit === 'sheet' ? `${l.sheets} × ${rupees(l.unitPaise)}` : `${l.sides} × ${rupees(l.unitPaise)}`}
-                        {l.copies > 1 ? ` × ${l.copies}` : ''}
-                      </span>
-                      <span className="font-mono tabular">{f.pages ? rupees(l.amountPaise) : '—'}</span>
-                    </div>
-                  )
-                })}
-                <div className="mt-2 flex items-end justify-between border-t border-divider pt-2">
-                  <div>
-                    <div className="font-mono text-2xl font-bold tabular">{quote ? rupees(quote.totalPaise) : '—'}</div>
-                    <div className="text-xs text-ink-muted">{quote?.pagesToConfirm ? t('priceAtCounter') : t('payAtCounter')}</div>
-                  </div>
-                  <WaitChip shop={shop} />
-                </div>
-              </Card>
+              {priceCard}
+              {privacy}
+              <div className="sticky bottom-0 -mx-4 border-t border-line bg-canvas px-4 py-3 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0">
+                <Button size="lg" className="w-full" onClick={send} disabled={!allUploaded || sending || !quote}>
+                  {sending ? <Spinner /> : null}
+                  {sending ? t('sending') : !allUploaded ? t('uploading') : t('send')}
+                  {quote && allUploaded && !sending ? <span className="ml-auto rounded bg-white/15 px-2 font-mono text-sm">{rupees(quote.totalPaise)}</span> : null}
+                </Button>
+              </div>
             </>
           )}
-
-          <p className="flex gap-2 rounded bg-surface-tint p-3 text-sm text-ink-muted">
-            <ShieldCheck className="h-5 w-5 shrink-0 text-ready" aria-hidden /> {t('privacy')}
-          </p>
-
-          {files.length > 0 && (
-            <div className="sticky bottom-0 -mx-4 border-t border-line bg-canvas px-4 py-3">
-              <Button size="lg" className="w-full" onClick={send} disabled={!allUploaded || sending || !quote}>
-                {sending ? <Spinner /> : null}
-                {sending ? t('sending') : !allUploaded ? t('uploading') : t('send')}
-                {quote && allUploaded && !sending ? <span className="ml-auto rounded bg-white/15 px-2 font-mono text-sm">{rupees(quote.totalPaise)}</span> : null}
-              </Button>
-            </div>
-          )}
-        </>
-      )}
+        </aside>
+      </div>
     </Shell>
   )
 }
@@ -396,7 +573,15 @@ export default function DropPage() {
 function WaitChip({ shop }: { shop: PublicShop }) {
   const { t } = useI18n()
   if (shop.wait.jobsAhead === 0) return <Chip tone="ready">{t('noWait')}</Chip>
-  return <Chip>{t(shop.wait.jobsAhead === 1 ? 'jobAhead1' : 'jobsAhead', { n: shop.wait.jobsAhead, low: shop.wait.lowMinutes, high: shop.wait.highMinutes })}</Chip>
+  return (
+    <Chip>
+      {t(shop.wait.jobsAhead === 1 ? 'jobAhead1' : 'jobsAhead', {
+        n: shop.wait.jobsAhead,
+        low: shop.wait.lowMinutes,
+        high: shop.wait.highMinutes,
+      })}
+    </Chip>
+  )
 }
 
 function FileRow({ lf, quote, onRemove, onRetry, onRange }: { lf: LocalFile; quote?: { amountPaise: number }; onRemove: () => void; onRetry: () => void; onRange: (r: string) => void }) {
@@ -465,7 +650,14 @@ function FileRow({ lf, quote, onRemove, onRetry, onRange }: { lf: LocalFile; quo
                 setEditRange(false)
               }}
             >
-              <input value={range} onChange={(e) => setRange(e.target.value)} inputMode="numeric" placeholder={t('pageRangeHint')} className="h-10 flex-1 rounded border-[1.5px] border-line bg-surface px-2" aria-label={t('pageRange')} />
+              <input
+                value={range}
+                onChange={(e) => setRange(e.target.value)}
+                inputMode="numeric"
+                placeholder={t('pageRangeHint')}
+                className="h-10 flex-1 rounded border-[1.5px] border-line bg-surface px-2"
+                aria-label={t('pageRange')}
+              />
               <Button size="sm" type="submit">
                 OK
               </Button>
@@ -482,31 +674,36 @@ function FileRow({ lf, quote, onRemove, onRetry, onRange }: { lf: LocalFile; quo
   )
 }
 
-export function Shell({ shop, children }: { shop?: PublicShop; children: React.ReactNode }) {
+export function Shell({ shop, children, wide = false }: { shop?: PublicShop; children: React.ReactNode; wide?: boolean }) {
   const { t } = useI18n()
+  const width = wide ? 'max-w-lg lg:max-w-6xl' : 'max-w-lg'
+  const status = shop && (
+    <>
+      {shop.onlineState === 'online' ? (
+        <Chip tone={shop.isOpen ? 'ready' : 'attention'}>{shop.isOpen ? t('open', { time: hhmm(shop.closesAt) }) : t('closed', { time: hhmm(shop.opensAt) })}</Chip>
+      ) : (
+        <Chip tone="attention">{t('paused')}</Chip>
+      )}
+      {shop.onlineState === 'online' && <WaitChip shop={shop} />}
+    </>
+  )
   return (
-    <div className="mx-auto flex min-h-screen max-w-lg flex-col">
-      <header className="sticky top-0 z-10 border-b border-line bg-surface px-4 py-3">
-        <div className="flex items-center gap-3">
-          <Logo size={40} />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-lg font-bold leading-tight">{shop?.name ?? 'Counter Drop'}</div>
-            <div className="truncate text-xs text-ink-muted">{shop ? shop.address || t('tagline') : t('tagline')}</div>
+    <div className="flex min-h-screen flex-col">
+      <header className="sticky top-0 z-10 border-b border-line bg-surface">
+        <div className={`mx-auto w-full px-4 py-3 lg:py-4 ${width}`}>
+          <div className="flex items-center gap-3">
+            <Logo size={40} />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-lg font-bold leading-tight lg:text-xl">{shop?.name ?? 'Counter Drop'}</div>
+              <div className="truncate text-xs text-ink-muted lg:text-sm">{shop ? shop.address || t('tagline') : t('tagline')}</div>
+            </div>
+            {shop && <div className="hidden flex-wrap items-center gap-2 lg:flex">{status}</div>}
+            <LangSwitch />
           </div>
-          <LangSwitch />
+          {shop && <div className="mt-2 flex flex-wrap gap-2 lg:hidden">{status}</div>}
         </div>
-        {shop && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {shop.onlineState === 'online' ? (
-              <Chip tone={shop.isOpen ? 'ready' : 'attention'}>{shop.isOpen ? t('open', { time: hhmm(shop.closesAt) }) : t('closed', { time: hhmm(shop.opensAt) })}</Chip>
-            ) : (
-              <Chip tone="attention">{t('paused')}</Chip>
-            )}
-            {shop.onlineState === 'online' && <WaitChip shop={shop} />}
-          </div>
-        )}
       </header>
-      <main className="flex-1 space-y-3 px-4 py-4">{children}</main>
+      <main className={`mx-auto w-full flex-1 space-y-3 px-4 py-4 lg:space-y-4 lg:py-8 ${width}`}>{children}</main>
     </div>
   )
 }

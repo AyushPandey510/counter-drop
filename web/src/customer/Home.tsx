@@ -12,47 +12,53 @@ export default function Home() {
   const [tickets, setTickets] = useState(savedTickets)
 
   return (
-    <Shell>
-      <section className="rounded border-2 border-ink bg-ink p-5 text-canvas">
-        <h1 className="text-2xl font-bold">{t('homeTitle')}</h1>
-        <p className="mt-2 text-sm opacity-90">{t('homeBody')}</p>
-      </section>
+    <Shell wide>
+      <div className="space-y-3 lg:grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-start lg:gap-8 lg:space-y-0">
+        <div className="space-y-3 lg:space-y-4">
+          <section className="rounded border-2 border-ink bg-ink p-5 text-canvas lg:p-10">
+            <h1 className="text-2xl font-bold lg:text-5xl lg:leading-tight">{t('homeTitle')}</h1>
+            <p className="mt-2 text-sm opacity-90 lg:mt-4 lg:text-lg">{t('homeBody')}</p>
+          </section>
+          <p className="hidden text-ink-muted lg:block">{t('privacy')}</p>
+        </div>
+        <div className="space-y-3">
+          {tickets.length > 0 && (
+            <Card className="divide-y divide-line">
+              {tickets.map((tk) => (
+                <div key={tk.jobId} className="flex items-center gap-3 p-3">
+                  <TicketIcon className="h-5 w-5 text-action" aria-hidden />
+                  <Link to={`/t/${tk.jobId}`} className="min-w-0 flex-1">
+                    <div className="font-mono text-lg font-bold">{tk.token ?? '—'}</div>
+                    <div className="truncate text-sm text-ink-muted">{tk.shopName}</div>
+                  </Link>
+                  <button
+                    type="button"
+                    aria-label={t('remove')}
+                    className="rounded p-2 text-ink-muted hover:bg-surface-tint"
+                    onClick={() => {
+                      forgetTicket(tk.jobId)
+                      setTickets(savedTickets())
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden />
+                  </button>
+                </div>
+              ))}
+            </Card>
+          )}
 
-      {tickets.length > 0 && (
-        <Card className="divide-y divide-line">
-          {tickets.map((tk) => (
-            <div key={tk.jobId} className="flex items-center gap-3 p-3">
-              <TicketIcon className="h-5 w-5 text-action" aria-hidden />
-              <Link to={`/t/${tk.jobId}`} className="min-w-0 flex-1">
-                <div className="font-mono text-lg font-bold">{tk.token ?? '—'}</div>
-                <div className="truncate text-sm text-ink-muted">{tk.shopName}</div>
-              </Link>
-              <button
-                type="button"
-                aria-label={t('remove')}
-                className="rounded p-2 text-ink-muted hover:bg-surface-tint"
-                onClick={() => {
-                  forgetTicket(tk.jobId)
-                  setTickets(savedTickets())
-                }}
-              >
-                <Trash2 className="h-4 w-4" aria-hidden />
-              </button>
-            </div>
-          ))}
-        </Card>
-      )}
+          <Card className="flex items-start gap-3 p-4">
+            <QrCode className="mt-0.5 h-6 w-6 shrink-0 text-action" aria-hidden />
+            <p className="text-sm">{t('scanHint')}</p>
+          </Card>
+          <p className="text-sm text-ink-muted lg:hidden">{t('privacy')}</p>
 
-      <Card className="flex items-start gap-3 p-4">
-        <QrCode className="mt-0.5 h-6 w-6 shrink-0 text-action" aria-hidden />
-        <p className="text-sm">{t('scanHint')}</p>
-      </Card>
-      <p className="text-sm text-ink-muted">{t('privacy')}</p>
-
-      <div className="pt-6 text-center">
-        <Link to="/shop/login" className="text-sm font-semibold text-action underline">
-          {t('staffLogin')}
-        </Link>
+          <div className="pt-6 text-center lg:pt-2 lg:text-left">
+            <Link to="/shop/login" className="text-sm font-semibold text-action underline">
+              {t('staffLogin')}
+            </Link>
+          </div>
+        </div>
       </div>
     </Shell>
   )
