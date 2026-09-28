@@ -1,59 +1,45 @@
 # Code status vs the plan
 
-Snapshot: 27 Sep 2026. Reviewed by reading the code against `docs/FSD.md` and `docs/build-plan/`. The code could not be compiled or tested during this review (the Go module proxy was not reachable from the review environment), so run `cd api && go test ./...` to confirm.
+Snapshot: 28 Sep 2026, after the MVP build. Verified by `go vet`, `go test ./...` against Postgres 17, `npm run build` (strict TypeScript), and a browser walkthrough (phone viewport for the customer, desktop for the board) with no console errors.
 
-**Summary:** a working backend slice exists (create job → presigned upload URL → submit → queue → claim/ready/collected/cancel/release, on Postgres or in memory). It is roughly the starting point of build-plan steps 04–10. Nothing in `web/`, `agent/`, `pkg/cdclient/`, `internal/realtime` or `internal/tasks` yet.
+**Summary:** the R1a walk-in pilot slice is built end to end. A customer scans the QR, uploads, sees the price, gets a token and a live ticket; staff sign in with a PIN, work the live board and mark collected; the deletion worker removes files 10 minutes after pickup and the customer's phone shows the deletion receipt.
 
 ## Present, by build-plan step
 
-| Step | What the plan needs | What exists | Status |
-| --- | --- | --- | --- |
-| 01 Dev env & CI | Makefile, lint, CI, test DB, `.gitignore` | `go.work`, docker-compose (Postgres + MinIO), `.env.example`; `.gitignore`, `.gitattributes`, `.editorconfig` added in this prep | Partial |
-| 02 Storage (R2) | Presign PUT/GET, head, delete, key scheme, smoke test | Presign PUT only (`storage/s3.go`); key `cd/{shop}/{job}/{file}` | Partial |
-| 03 OpenAPI | Full v1 contract | 7 operations sketched, no schemas | Early |
-| 04 API foundation | Context, error mapping, envelope v2, middleware | Single `router.go`, envelope `{success,data,error}`, request logger; no context in store, no recover/CORS/request ID | Early |
-| 05 Schema v2 | Migrations 0004–0008 | 0001–0003 (shops, token counters, jobs, files, upload + deletion columns) | Early |
-| 06 State machine v2 | 10 states, T1–T19, effects | 5 states (`new`, `claimed`, `ready`, `collected`, `cancelled`), actions claim/ready/collected/cancel/release, 2 tests | Early |
-| 07 Auth | OTP, PIN, sessions, shop scope | None | Not started |
-| 08 Pricing | Quote engine | None (demo shop has 2 prices) | Not started |
-| 09 Tokens & wait | Daily tokens per lane, wait engine | Token counter per shop (`A-NN`), no daily reset, no lanes | Early |
-| 10 Walk-in job API | Create, upload confirm, page count, quote, submit, ticket, cancel | Create, submit, get, all without verification or page count | Early |
-| 11 Shop API | Queue, claim-next, actions, lookup, settings | Queue + actions (no auth) | Early |
-| 12 Outbox/audit/tasks | Outbox, audit log, scheduled tasks | None | Not started |
-| 13 Realtime | WebSocket hub | Empty package | Not started |
-| 14 Deletion worker | Worker, receipts, safety audit | `delete_after` is set on collected/cancel; no worker deletes anything | Early |
-| 15–22 Web PWA | React PWA | `web/src/*` placeholders | Not started |
-| 23+ | Admin, security, deploy, R1b | Dockerfile only | Not started |
+| Step | Status | Notes |
+| --- | --- | --- |
+| 01 Dev env | Partial | compose (Postgres; MinIO optional profile), `.env.example`, git files. No Makefile or CI yet |
+| 02 Storage | Done (MVP) | `ObjectStore`: R2/S3 presign PUT (length-signed) / GET / head / delete, plus **local disk** with HMAC-signed links (default) |
+| 03 OpenAPI | Stale | `contracts/openapi.yaml` predates the MVP; `api/README.md` has the current routes |
+| 04 API foundation | Done | recover, request ID, path-only logging, CORS, `{data}` / `{error}` envelope, strict JSON decode, context everywhere |
+| 05 Schema v2 | Done (MVP) | `0004_mvp_walkin.sql`: lanes, staff, sessions, daily token counters, job events, file settings and deletion retries; upgrades old rows |
+| 06 State machine | Done (MVP) | uploading → queued → claimed → ready → collected, cancelled; release, undo, abandon; effects; full matrix test |
+| 07 Auth | Partial | Staff PIN (pbkdf2, lockout), hashed sessions, shop scope, owner role. **No phone OTP / signup** (use `cdadmin`) |
+| 08 Pricing | Done | Paise, per side / per sheet, colour, copies, page ranges, minimum charge, rupee rounding, price version |
+| 09 Tokens & wait | Done | Daily tokens per lane (A B/W, B colour), IST business day, wait range and ready-by |
+| 10 Walk-in job API | Done | Create, add/remove files, upload confirm with size/type check, page count, quote, submit, ticket, cancel |
+| 11 Shop API | Done (MVP) | Queue, claim-next (`SKIP LOCKED`), actions, lookup, state, settings, signed file links |
+| 12 Outbox/audit | Partial | `cd_job_events` audit trail; no outbox |
+| 13 Realtime | Done (MVP) | **SSE** hub (not WebSocket), polling fallback |
+| 14 Deletion worker | Done | Retries with backoff, clears names, drops file names, abandons drafts, deletion-health endpoint |
+| 15–22 Web PWA | Done (MVP) | Home, drop page, ticket, shop login, board, settings, QR poster; EN/HI/MR customer screens; installable PWA |
+| 23+ | Not started | Admin console, R1b (Print nearby, UPI prepay), print agent, deploy pipeline |
 
-## Issues found (fix in the step noted)
+## Decisions taken while building (update BRD/FSD when convenient)
 
-| # | Issue | Why it matters | Where | Fix in |
-| --- | --- | --- | --- | --- |
-| 1 | **Docker image had no migrations** — the API applies `./migrations` at startup but the runtime image only contained the binary | Container would fail on start | `api/Dockerfile` | **Fixed in this prep** |
-| 2 | Shop routes have no authentication and take `?shop=` from the query | Anyone can view any queue and change any job | `httpapi/router.go` | 07 |
-| 3 | Token is issued at **create**, and jobs enter the queue (`new`) before files are uploaded | Abandoned drafts burn tokens; staff see jobs with no files | `store/*.go CreateJob` | 06, 09, 10 |
-| 4 | Submit marks every file `uploaded` without checking storage | A job can reach the counter with missing or wrong files | `SubmitJob` | 10 |
-| 5 | Ticket secret stored in plain text, compared with `!=`, passed in the URL query | Leaks via logs/referrers; timing attack surface | store, router | 04, 05 |
-| 6 | Token counter never resets | Tokens grow forever (`A-4821`) instead of `A-01` each day | `cd_token_counters` | 09 |
-| 7 | Queue returns every job ever, with one files query per job | Slows down as history grows (N+1) | `ListShopQueue` | 11 |
-| 8 | Undo window is 15 min | Docs say 10 min | `collectedDeleteGrace` | 14 |
-| 9 | `customerName` is required | Docs make it optional (walk-in never needs identity) | `router.go` | 10 |
-| 10 | No worker deletes files | Privacy promise (CT-1) not met yet | `internal/tasks` | 14 |
-| 11 | Migrations run relative to the working directory and have no checksum | Breaks when started from another folder; edited migrations go unnoticed | `ApplyMigrations`, `main.go` | 05 |
-| 12 | Store methods create their own `context.Background()` | Request cancellation and timeouts don't propagate | store | 04 |
-| 13 | All `go.mod` requirements marked `// indirect` | Cosmetic; `go mod tidy` fixes it | `api/go.mod` | 01 |
-| 14 | MinIO image uses `:latest` and wasn't pullable | Unreliable local setup | `deploy/docker-compose.yml` | 01–02 (switch to R2) |
-| 15 | Go version 1.27.1 everywhere | Make sure your local Go and CI images match | `go.work`, `go.mod`, Dockerfile | 01 |
+| Decision | Why |
+| --- | --- |
+| Server-Sent Events instead of WebSocket | One-way updates are all R1a needs; no extra dependency; works through proxies. Single API instance for now (hub is in memory) |
+| Page count on the phone with pdf.js; server falls back to "pages confirmed at counter" | No PDF parsing on the server in R1a |
+| Local-disk storage as the default | Pilot runs on one server without an R2 account; R2 switches on with env vars |
+| Postgres required; in-memory store removed | One code path to test |
+| Business day = local midnight (IST) | Tokens restart at A-01 each day |
+| PIN-only staff sign-in, shops created with `cdadmin` | OTP and self-signup are the next auth step |
+| Audio/voice features deferred | As agreed |
 
-## Good to keep
+## Next
 
-- Clean module layout (`domain`, `store`, `httpapi`, `storage`) that matches the FSD.
-- State changes run in transactions with `SELECT … FOR UPDATE`, so claims are already atomic.
-- Object keys contain only IDs (no file names).
-- Deletion columns (`delete_status`, `delete_after`, `deleted_at`) already in the schema.
-- In-memory store for quick demos without Postgres.
-
-## Housekeeping
-
-- Not yet a git repository — see "Getting started" in the root `README.md`.
-- `.gitkeep` files can be deleted from folders that now contain code (`api/cmd/api`, `api/internal/{config,domain,httpapi,storage,store}`, `api/migrations`).
+1. Deploy a pilot: one small VM (API + built web via `CD_WEB_DIR`) + managed Postgres, HTTPS, `CD_STORAGE_SIGNING_KEY` set; or R2.
+2. Phone OTP for owners and shop self-signup (step 07) + admin console (step 23).
+3. Refresh `contracts/openapi.yaml`; add Makefile and CI (step 01).
+4. R1b: Print nearby and UPI prepay.

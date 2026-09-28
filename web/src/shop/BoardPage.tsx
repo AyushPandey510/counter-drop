@@ -1,0 +1,479 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Check, ExternalLink, LogOut, Moon, Play, Printer, QrCode, RotateCcw, Search, Settings, Sun, Undo2, Volume2, VolumeX, X, Zap } from 'lucide-react'
+import { ApiError } from '@/lib/api'
+import { chime, useLive } from '@/lib/live'
+import { clock, minutesSince, mmss, rupees } from '@/lib/format'
+import type { Job, JobState, OnlineState, QueueSnapshot } from '@/lib/types'
+import { Banner, Button, Chip, Logo, Spinner } from '@/components/ui'
+import { useShopAuth, useShopTheme } from './auth'
+
+type Column = { key: string; title: string; states: JobState[] }
+const COLUMNS: Column[] = [
+  { key: 'queued', title: 'In line', states: ['queued'] },
+  { key: 'claimed', title: 'Printing', states: ['claimed'] },
+  { key: 'ready', title: 'Ready', states: ['ready'] },
+  { key: 'collected', title: 'Collected · undo 10 min', states: ['collected'] },
+]
+
+const CANCEL_REASONS = [
+  ['file_problem', "File won't open or print"],
+  ['customer_request', 'Customer asked to cancel'],
+  ['duplicate', 'Sent twice'],
+  ['other', 'Other'],
+] as const
+
+function settingsSummary(j: Job): string {
+  const f = j.files[0]?.settings
+  if (!f) return ''
+  const multi = j.files.some((x) => x.settings.colour !== f.colour || x.settings.bothSides !== f.bothSides || x.settings.copies !== f.copies)
+  if (multi) return 'Mixed settings'
+  return [f.colour ? 'Colour' : 'B/W', f.bothSides ? 'both sides' : 'one side', f.copies > 1 ? `×${f.copies}` : ''].filter(Boolean).join(' · ')
+}
+
+export default function BoardPage() {
+  const { session, call, logout, setShop } = useShopAuth()
+  const [dark, setDark] = useShopTheme()
+  const [snap, setSnap] = useState<QueueSnapshot | null>(null)
+  const [lane, setLane] = useState<string>('')
+  const [openId, setOpenId] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const [toast, setToast] = useState('')
+  const [sound, setSound] = useState(true)
+  const [rush, setRush] = useState(false)
+  const [mobileCol, setMobileCol] = useState('queued')
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<Job[] | null>(null)
+  const [now, setNow] = useState(Date.now())
+  const known = useRef<Set<string> | null>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+  const soundRef = useRef(sound)
+  soundRef.current = sound
+
+  const load = useCallback(async () => {
+    try {
+      const q = await call<QueueSnapshot>('/shop/queue')
+      const queuedIds = new Set(q.jobs.filter((j) => j.state === 'queued').map((j) => j.id))
+      if (known.current && soundRef.current && [...queuedIds].some((id) => !known.current!.has(id))) chime('soft')
+      known.current = new Set(q.jobs.map((j) => j.id))
+      setSnap(q)
+      setShop(q.shop)
+      setError('')
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Connection problem — showing the last queue.')
+    }
+  }, [call, setShop])
+
+  useEffect(() => {
+    load()
+  }, [load])
+  useLive(session ? `/shop/events?token=${encodeURIComponent(session.token)}` : null, () => load(), load, 10000)
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const flash = (msg: string) => {
+    setToast(msg)
+    window.setTimeout(() => setToast(''), 3000)
+  }
+
+  const act = async (job: Job, action: string, body: Record<string, string> = {}) => {
+    try {
+      await call<Job>(`/shop/jobs/${job.id}/${action}`, { body })
+      await load()
+      if (action === 'claim') setOpenId(job.id)
+      if (action === 'ready' || action === 'collected' || action === 'cancel') setOpenId(null)
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'already_claimed') flash(`${job.token} was taken by another counter.`)
+      else flash(e instanceof ApiError ? e.message : 'Action failed')
+      await load()
+    }
+  }
+
+  const claimNext = async () => {
+    try {
+      const j = await call<Job>('/shop/claim-next', { body: { lane } })
+      await load()
+      setOpenId(j.id)
+    } catch (e) {
+      flash(e instanceof ApiError && e.code === 'lane_empty' ? 'Nothing waiting.' : e instanceof ApiError ? e.message : 'Could not claim')
+    }
+  }
+
+  const setState = async (state: OnlineState) => {
+    let message = ''
+    if (state === 'paused') message = window.prompt('Message for customers (optional)', 'Very busy — back in 10 minutes') ?? ''
+    try {
+      setShop(await call('/shop/state', { method: 'PUT', body: { state, message } }))
+      await load()
+    } catch (e) {
+      flash(e instanceof ApiError ? e.message : 'Could not change status')
+    }
+  }
+
+  const runSearch = async (q: string) => {
+    setQuery(q)
+    if (q.trim().length < 2) {
+      setResults(null)
+      return
+    }
+    try {
+      setResults(await call<Job[]>(`/shop/lookup?q=${encodeURIComponent(q)}`))
+    } catch {
+      setResults([])
+    }
+  }
+
+  const jobs = useMemo(() => (snap?.jobs ?? []).filter((j) => !lane || j.lane === lane || (j.state !== 'queued' && j.state !== 'claimed' ? true : false)), [snap, lane])
+  const openJob = snap?.jobs.find((j) => j.id === openId) ?? results?.find((j) => j.id === openId) ?? null
+
+  // Keyboard: N claim next, R ready (open job), C collected (open job), / search, Esc close.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key === '/') {
+        e.preventDefault()
+        searchRef.current?.focus()
+      } else if (e.key === 'n' || e.key === 'N') claimNext()
+      else if ((e.key === 'r' || e.key === 'R') && openJob?.state === 'claimed') act(openJob, 'ready')
+      else if ((e.key === 'c' || e.key === 'C') && openJob?.state === 'ready') act(openJob, 'collected')
+      else if (e.key === 'Escape') setOpenId(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
+  if (!snap) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        {error ? <Banner tone="danger">{error}</Banner> : <Spinner className="h-8 w-8" />}
+      </div>
+    )
+  }
+  const shop = snap.shop
+  const queuedCount = (l: string) => snap.jobs.filter((j) => j.state === 'queued' && (!l || j.lane === l)).length
+  const isOwner = session?.staff.role === 'owner'
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <header className="no-print sticky top-0 z-20 border-b border-line bg-surface">
+        <div className="flex flex-wrap items-center gap-3 px-4 py-2">
+          <Logo size={36} />
+          <div className="min-w-0">
+            <div className="truncate font-bold">{shop.name}</div>
+            <div className="font-mono text-xs text-ink-muted">
+              {session?.staff.name} · {snap.todayCount} today
+            </div>
+          </div>
+          <div className="flex rounded border-[1.5px] border-line" role="group" aria-label="Shop status">
+            {(['online', 'paused', 'offline'] as OnlineState[]).map((s) => (
+              <button
+                key={s}
+                onClick={() => setState(s)}
+                aria-pressed={shop.onlineState === s}
+                className={`min-h-[40px] px-3 text-sm font-semibold capitalize ${shop.onlineState === s ? (s === 'online' ? 'bg-ready text-white' : s === 'paused' ? 'bg-attention text-white' : 'bg-ink text-canvas') : 'text-ink-muted'}`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          <div className="relative ml-auto min-w-[220px] flex-1 sm:max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" aria-hidden />
+            <input ref={searchRef} value={query} onChange={(e) => runSearch(e.target.value)} placeholder="Token or name   [ / ]" aria-label="Find a job by token or name" className="h-10 w-full rounded border-[1.5px] border-line bg-canvas pl-9 pr-3 font-mono text-sm" />
+            {results && (
+              <div className="absolute left-0 right-0 top-11 z-30 max-h-80 overflow-auto rounded border-[1.5px] border-line bg-surface shadow-modal">
+                {results.length === 0 ? (
+                  <p className="p-3 text-sm text-ink-muted">No match today.</p>
+                ) : (
+                  results.map((j) => (
+                    <button
+                      key={j.id}
+                      className="flex w-full items-center gap-3 border-b border-divider px-3 py-2 text-left hover:bg-surface-tint"
+                      onClick={() => {
+                        setOpenId(j.id)
+                        setResults(null)
+                        setQuery('')
+                      }}
+                    >
+                      <span className="font-mono text-lg font-bold">{j.token}</span>
+                      <span className="flex-1 truncate">{j.customerName || '—'}</span>
+                      <Chip>{j.state}</Chip>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <IconBtn label={rush ? 'Rush mode on' : 'Rush mode off'} onClick={() => setRush(!rush)} active={rush}>
+              <Zap className="h-5 w-5" />
+            </IconBtn>
+            <IconBtn label={sound ? 'Sound on' : 'Sound off'} onClick={() => { setSound(!sound); if (!sound) chime('soft') }}>
+              {sound ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+            </IconBtn>
+            <IconBtn label={dark ? 'Light theme' : 'Dark theme'} onClick={() => setDark(!dark)}>
+              {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </IconBtn>
+            <Link to="/shop/qr" className="rounded p-2 hover:bg-surface-tint" aria-label="QR poster" title="QR poster">
+              <QrCode className="h-5 w-5" />
+            </Link>
+            {isOwner && (
+              <Link to="/shop/settings" className="rounded p-2 hover:bg-surface-tint" aria-label="Settings" title="Settings">
+                <Settings className="h-5 w-5" />
+              </Link>
+            )}
+            <IconBtn label="Sign out" onClick={logout}>
+              <LogOut className="h-5 w-5" />
+            </IconBtn>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 border-t border-divider px-4 py-2">
+          <div className="flex gap-1" role="tablist" aria-label="Lanes">
+            <LaneTab active={lane === ''} onClick={() => setLane('')} label="All lanes" count={queuedCount('')} />
+            {shop.lanes.map((l) => (
+              <LaneTab key={l.id} active={lane === l.letter} onClick={() => setLane(l.letter)} label={`Lane ${l.letter} · ${l.name}`} count={queuedCount(l.letter)} />
+            ))}
+          </div>
+          <Button size="sm" className="ml-auto" onClick={claimNext}>
+            <Play className="h-4 w-4" aria-hidden /> Claim oldest <kbd className="rounded bg-white/20 px-1 font-mono text-xs">N</kbd>
+          </Button>
+          <span className="hidden font-mono text-xs text-ink-muted lg:inline">R ready · C collected · / search</span>
+        </div>
+        {shop.onlineState !== 'online' && (
+          <div className="bg-attention-bg px-4 py-1 text-sm font-semibold text-attention">Customers can't send new jobs while the shop is {shop.onlineState}.</div>
+        )}
+        {error && <div className="bg-danger-bg px-4 py-1 text-sm font-semibold text-danger">{error}</div>}
+      </header>
+
+      <div className="flex gap-1 border-b border-line bg-surface px-2 lg:hidden" role="tablist">
+        {COLUMNS.map((c) => (
+          <button key={c.key} role="tab" aria-selected={mobileCol === c.key} onClick={() => setMobileCol(c.key)} className={`flex-1 border-b-2 px-2 py-2 text-sm font-semibold ${mobileCol === c.key ? 'border-action text-action' : 'border-transparent text-ink-muted'}`}>
+            {c.title.split(' ·')[0]} <span className="font-mono">{jobs.filter((j) => c.states.includes(j.state)).length}</span>
+          </button>
+        ))}
+      </div>
+
+      <main className="grid flex-1 gap-3 p-3 lg:grid-cols-4">
+        {COLUMNS.map((c) => {
+          let list = jobs.filter((j) => c.states.includes(j.state))
+          if (c.key === 'collected') list = list.slice().reverse()
+          if (rush && c.key === 'queued') list = list.slice(0, 3)
+          return (
+            <section key={c.key} className={`${mobileCol === c.key ? 'block' : 'hidden'} min-w-0 lg:block`} aria-label={c.title}>
+              <h2 className="mb-2 flex items-center justify-between px-1 text-sm font-bold uppercase tracking-wide text-ink-muted">
+                {c.title}
+                <span className="font-mono">{list.length}</span>
+              </h2>
+              <div className="space-y-2">
+                {list.length === 0 && <p className="rounded border border-dashed border-line p-4 text-center text-sm text-ink-subtle">Nothing here</p>}
+                {list.map((j) => (
+                  <JobCard key={j.id} job={j} now={now} rush={rush} undoSeconds={snap.undoWindowSeconds} onOpen={() => setOpenId(j.id)} act={act} />
+                ))}
+              </div>
+            </section>
+          )
+        })}
+      </main>
+
+      {openJob && <JobPanel job={openJob} onClose={() => setOpenId(null)} act={act} call={call} flash={flash} />}
+      {toast && (
+        <div role="status" className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded border-2 border-ink bg-surface px-4 py-2 font-semibold shadow-modal">
+          {toast}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function IconBtn({ label, onClick, children, active }: { label: string; onClick: () => void; children: React.ReactNode; active?: boolean }) {
+  return (
+    <button type="button" onClick={onClick} aria-label={label} title={label} className={`rounded p-2 hover:bg-surface-tint ${active ? 'bg-attention-bg text-attention' : ''}`}>
+      {children}
+    </button>
+  )
+}
+
+function LaneTab({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number }) {
+  return (
+    <button role="tab" aria-selected={active} onClick={onClick} className={`min-h-[36px] rounded px-3 text-sm font-semibold ${active ? 'bg-ink text-canvas' : 'border-[1.5px] border-line text-ink-muted'}`}>
+      {label} <span className="font-mono">({count})</span>
+    </button>
+  )
+}
+
+function JobCard({ job, now, rush, undoSeconds, onOpen, act }: { job: Job; now: number; rush: boolean; undoSeconds: number; onOpen: () => void; act: (j: Job, a: string, b?: Record<string, string>) => void }) {
+  const age = minutesSince(job.queuedAt, now)
+  const ageTone = job.state === 'queued' ? (age >= 20 ? 'danger' : age >= 10 ? 'attention' : 'neutral') : 'neutral'
+  const undoLeft = job.collectedAt ? new Date(job.collectedAt).getTime() + undoSeconds * 1000 - now : 0
+  return (
+    <article className={`rounded border-[1.5px] bg-surface p-3 ${job.state === 'ready' ? 'border-ready' : job.state === 'claimed' ? 'border-action' : 'border-line'}`}>
+      <button type="button" onClick={onOpen} className="flex w-full items-start gap-3 text-left" aria-label={`Open ${job.token}`}>
+        <span className={`font-mono font-bold leading-none ${rush ? 'text-4xl' : 'text-3xl'}`}>{job.token ?? '—'}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-semibold">{job.customerName || 'Walk-in'}</span>
+          {!rush && (
+            <span className="block text-xs text-ink-muted">
+              {job.files.length} file{job.files.length === 1 ? '' : 's'} · {job.pagesToConfirm ? 'pages ?' : `${job.pagesTotal} pp`} · {settingsSummary(job)}
+            </span>
+          )}
+        </span>
+        <span className="text-right">
+          <span className="block font-mono font-bold">{job.pagesToConfirm ? '₹ ?' : rupees(job.priceTotalPaise)}</span>
+          {job.state === 'queued' && <Chip tone={ageTone}>{age} min</Chip>}
+          {job.state === 'claimed' && job.claimedBy && <span className="block text-xs text-ink-muted">{job.claimedBy}</span>}
+        </span>
+      </button>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {job.lane && <Chip>Lane {job.lane}</Chip>}
+        <Chip tone="dark">WALK-IN</Chip>
+      </div>
+      <div className="mt-3 flex gap-2">
+        {job.state === 'queued' && (
+          <Button size={rush ? 'lg' : 'md'} className="flex-1" onClick={() => act(job, 'claim')}>
+            <Printer className="h-4 w-4" aria-hidden /> Claim
+          </Button>
+        )}
+        {job.state === 'claimed' && (
+          <>
+            <Button size="md" variant="secondary" onClick={onOpen}>
+              <ExternalLink className="h-4 w-4" aria-hidden /> Files
+            </Button>
+            <Button size={rush ? 'lg' : 'md'} variant="ready" className="flex-1" onClick={() => act(job, 'ready')}>
+              <Check className="h-4 w-4" aria-hidden /> Ready
+            </Button>
+          </>
+        )}
+        {job.state === 'ready' && (
+          <>
+            <Button size="md" variant="secondary" className="flex-1" onClick={() => act(job, 'collected', { paid: 'cash' })}>
+              Paid cash
+            </Button>
+            <Button size="md" variant="secondary" className="flex-1" onClick={() => act(job, 'collected', { paid: 'upi' })}>
+              Paid UPI
+            </Button>
+            <Button size="md" variant="ready" onClick={() => act(job, 'collected')} aria-label="Collected">
+              <Check className="h-4 w-4" aria-hidden />
+            </Button>
+          </>
+        )}
+        {job.state === 'collected' && (
+          <>
+            <span className="flex-1 self-center text-xs text-ink-muted">
+              {job.filesDeletedAt ? `Files deleted ${clock(job.filesDeletedAt)}` : `Files deleted in ${mmss(undoLeft)}`}
+              {job.paidMethod ? ` · paid ${job.paidMethod === 'upi' ? 'UPI' : job.paidMethod}` : ''}
+            </span>
+            {!job.filesDeletedAt && undoLeft > 0 && (
+              <Button size="sm" variant="secondary" onClick={() => act(job, 'undo')}>
+                <Undo2 className="h-4 w-4" aria-hidden /> Undo
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    </article>
+  )
+}
+
+function JobPanel({ job, onClose, act, call, flash }: { job: Job; onClose: () => void; act: (j: Job, a: string, b?: Record<string, string>) => Promise<void>; call: <T>(p: string, o?: { method?: string; body?: unknown }) => Promise<T>; flash: (m: string) => void }) {
+  const [reason, setReason] = useState('')
+  const openFile = async (fileId: string) => {
+    // Open the tab synchronously so pop-up blockers allow it, then point it at the signed URL.
+    const w = window.open('', '_blank')
+    try {
+      const { url } = await call<{ url: string }>(`/shop/jobs/${job.id}/files/${fileId}/url`)
+      if (w) w.location.href = url
+      else window.location.href = url
+    } catch (e) {
+      w?.close()
+      flash(e instanceof ApiError ? e.message : 'Could not open file')
+    }
+  }
+  return (
+    <div className="no-print fixed inset-0 z-40 flex justify-end bg-[rgba(15,23,42,0.72)]" onClick={onClose}>
+      <aside className="flex h-full w-full max-w-md flex-col overflow-auto border-l-2 border-ink bg-surface" onClick={(e) => e.stopPropagation()} aria-label={`Job ${job.token}`}>
+        <div className="flex items-center gap-3 border-b border-line p-4">
+          <span className="font-mono text-4xl font-bold">{job.token}</span>
+          <div className="flex-1">
+            <div className="font-semibold">{job.customerName || 'Walk-in'}</div>
+            <div className="text-xs capitalize text-ink-muted">
+              {job.state === 'claimed' ? `Printing · ${job.claimedBy}` : job.state} · queued {clock(job.queuedAt)}
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded p-2 hover:bg-surface-tint" aria-label="Close">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+        <div className="flex-1 space-y-2 p-4">
+          {job.files.map((f, i) => (
+            <div key={f.id} className="rounded border-[1.5px] border-line p-3">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-sm text-ink-muted">{i + 1}.</span>
+                <span className="min-w-0 flex-1 truncate font-semibold">{f.filename || 'Deleted file'}</span>
+                {!f.deletedAt && job.state !== 'cancelled' && (
+                  <Button size="sm" variant="secondary" onClick={() => openFile(f.id)}>
+                    <ExternalLink className="h-4 w-4" aria-hidden /> Open
+                  </Button>
+                )}
+              </div>
+              <div className="mt-1 text-sm font-bold">
+                {f.pagesStatus === 'unknown' ? 'Pages: count at counter' : `${f.pages} page${f.pages === 1 ? '' : 's'}`}
+                {f.settings.pageRange ? ` · print pages ${f.settings.pageRange}` : ''} · {f.settings.colour ? 'COLOUR' : 'B/W'} · {f.settings.bothSides ? 'BOTH SIDES' : 'ONE SIDE'} · ×{f.settings.copies}
+              </div>
+            </div>
+          ))}
+          <div className="flex items-center justify-between rounded bg-surface-tint p-3">
+            <span className="font-semibold">Collect at counter</span>
+            <span className="font-mono text-xl font-bold">{job.pagesToConfirm ? 'Confirm pages' : rupees(job.priceTotalPaise)}</span>
+          </div>
+        </div>
+        <div className="space-y-2 border-t border-line p-4">
+          {job.state === 'queued' && (
+            <Button className="w-full" size="lg" onClick={() => act(job, 'claim')}>
+              <Printer className="h-5 w-5" aria-hidden /> Claim
+            </Button>
+          )}
+          {job.state === 'claimed' && (
+            <>
+              <Button variant="ready" className="w-full" size="lg" onClick={() => act(job, 'ready')}>
+                <Check className="h-5 w-5" aria-hidden /> Mark ready <kbd className="rounded bg-white/20 px-1 font-mono text-xs">R</kbd>
+              </Button>
+              <Button variant="secondary" className="w-full" onClick={() => act(job, 'release')}>
+                <RotateCcw className="h-4 w-4" aria-hidden /> Release to top of line
+              </Button>
+            </>
+          )}
+          {job.state === 'ready' && (
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="secondary" onClick={() => act(job, 'collected', { paid: 'cash' })}>
+                Paid cash
+              </Button>
+              <Button variant="secondary" onClick={() => act(job, 'collected', { paid: 'upi' })}>
+                Paid UPI
+              </Button>
+              <Button variant="ready" className="col-span-2" size="lg" onClick={() => act(job, 'collected')}>
+                <Check className="h-5 w-5" aria-hidden /> Collected <kbd className="rounded bg-white/20 px-1 font-mono text-xs">C</kbd>
+              </Button>
+            </div>
+          )}
+          {(job.state === 'queued' || job.state === 'claimed' || job.state === 'ready') && (
+            <div className="flex gap-2 pt-2">
+              <select value={reason} onChange={(e) => setReason(e.target.value)} className="h-12 flex-1 rounded border-[1.5px] border-line bg-surface px-2 text-sm" aria-label="Cancel reason">
+                <option value="">Cancel job — choose a reason</option>
+                {CANCEL_REASONS.map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+              <Button variant="danger" disabled={!reason} onClick={() => window.confirm(`Cancel ${job.token}? The customer's files will be deleted.`) && act(job, 'cancel', { reason })}>
+                Cancel
+              </Button>
+            </div>
+          )}
+        </div>
+      </aside>
+    </div>
+  )
+}

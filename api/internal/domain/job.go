@@ -5,14 +5,35 @@ import (
 	"time"
 )
 
+// JobState is the lifecycle state of a print job (FSD §8, walk-in subset for R1a).
 type JobState string
 
 const (
-	JobStateNew       JobState = "new"
-	JobStateClaimed   JobState = "claimed"
-	JobStateReady     JobState = "ready"
-	JobStateCollected JobState = "collected"
+	JobStateUploading JobState = "uploading" // draft: files uploading, not visible to the shop
+	JobStateQueued    JobState = "queued"    // in a lane, waiting to be claimed
+	JobStateClaimed   JobState = "claimed"   // a counter is printing it
+	JobStateReady     JobState = "ready"     // printed, waiting for pickup
+	JobStateCollected JobState = "collected" // handed over; undo window open, files deleted after it
 	JobStateCancelled JobState = "cancelled"
+)
+
+// ParseJobState accepts the legacy "new" value as an alias of queued.
+func ParseJobState(s string) JobState {
+	if s == "new" {
+		return JobStateQueued
+	}
+	return JobState(s)
+}
+
+func (s JobState) IsTerminal() bool {
+	return s == JobStateCollected || s == JobStateCancelled
+}
+
+type Channel string
+
+const (
+	ChannelWalkIn Channel = "walkin"
+	ChannelRemote Channel = "remote" // R1b
 )
 
 type UploadStatus string
@@ -31,7 +52,20 @@ const (
 	DeleteStatusFailed  DeleteStatus = "failed"
 )
 
-var ErrInvalidTransition = errors.New("invalid job state transition")
+type PagesStatus string
+
+const (
+	PagesPending PagesStatus = "pending"
+	PagesCounted PagesStatus = "counted"
+	PagesUnknown PagesStatus = "unknown"
+)
+
+var (
+	ErrInvalidTransition = errors.New("invalid job state transition")
+	ErrReasonRequired    = errors.New("reason required")
+	ErrWindowExpired     = errors.New("undo window expired")
+	ErrWrongActor        = errors.New("actor not allowed")
+)
 
 type JobFile struct {
 	ID           string       `json:"id"`
@@ -39,65 +73,193 @@ type JobFile struct {
 	Size         int64        `json:"size"`
 	Mime         string       `json:"mime"`
 	Pages        int          `json:"pages"`
-	ObjectKey    string       `json:"objectKey,omitempty"`
+	PagesStatus  PagesStatus  `json:"pagesStatus"`
+	Settings     FileSettings `json:"settings"`
+	ObjectKey    string       `json:"-"`
 	UploadStatus UploadStatus `json:"uploadStatus"`
 	DeleteStatus DeleteStatus `json:"deleteStatus"`
 	DeleteAfter  *time.Time   `json:"deleteAfter,omitempty"`
 	DeletedAt    *time.Time   `json:"deletedAt,omitempty"`
-	UploadURL    string       `json:"uploadUrl,omitempty"`
 }
 
 type Job struct {
-	ID           string         `json:"id"`
-	ShopID       string         `json:"shopId"`
-	Token        string         `json:"token"`
-	Secret       string         `json:"secret,omitempty"`
-	CustomerName string         `json:"customerName"`
-	Settings     map[string]any `json:"settings"`
-	Files        []JobFile      `json:"files"`
-	State        JobState       `json:"state"`
-	CreatedAt    time.Time      `json:"createdAt"`
-	UpdatedAt    time.Time      `json:"updatedAt"`
-	ClaimedAt    *time.Time     `json:"claimedAt,omitempty"`
-	ReadyAt      *time.Time     `json:"readyAt,omitempty"`
-	CollectedAt  *time.Time     `json:"collectedAt,omitempty"`
+	ID             string     `json:"id"`
+	ShopID         string     `json:"shopId"`
+	Channel        Channel    `json:"channel"`
+	LaneID         string     `json:"laneId,omitempty"`
+	Lane           string     `json:"lane,omitempty"`
+	Token          string     `json:"token,omitempty"`
+	CustomerName   string     `json:"customerName,omitempty"`
+	Files          []JobFile  `json:"files"`
+	State          JobState   `json:"state"`
+	PriceTotal     int64      `json:"priceTotalPaise"`
+	PagesTotal     int        `json:"pagesTotal"`
+	PagesToConfirm bool       `json:"pagesToConfirm"`
+	ReadyBy        *time.Time `json:"readyBy,omitempty"`
+	ClaimedBy      string     `json:"claimedBy,omitempty"`
+	CancelReason   string     `json:"cancelReason,omitempty"`
+	PaidMethod     string     `json:"paidMethod,omitempty"`
+	BusinessDay    string     `json:"businessDay,omitempty"`
+	CreatedAt      time.Time  `json:"createdAt"`
+	UpdatedAt      time.Time  `json:"updatedAt"`
+	QueuedAt       *time.Time `json:"queuedAt,omitempty"`
+	ClaimedAt      *time.Time `json:"claimedAt,omitempty"`
+	ReadyAt        *time.Time `json:"readyAt,omitempty"`
+	CollectedAt    *time.Time `json:"collectedAt,omitempty"`
+	CancelledAt    *time.Time `json:"cancelledAt,omitempty"`
+	FilesDeletedAt *time.Time `json:"filesDeletedAt,omitempty"`
 }
 
-func (j *Job) Apply(action string, now time.Time) error {
+// Action is something a customer, staff member or the system does to a job.
+type Action string
+
+const (
+	ActionSubmit    Action = "submit"
+	ActionClaim     Action = "claim"
+	ActionRelease   Action = "release"
+	ActionReady     Action = "ready"
+	ActionCollected Action = "collected"
+	ActionUndo      Action = "undo"
+	ActionCancel    Action = "cancel"
+	ActionEdit      Action = "edit"
+	ActionAbandon   Action = "abandon"
+)
+
+type ActorType string
+
+const (
+	ActorGuest  ActorType = "guest"
+	ActorStaff  ActorType = "staff"
+	ActorSystem ActorType = "system"
+)
+
+type Actor struct {
+	Type ActorType
+	ID   string
+	Name string
+}
+
+// Policy holds configurable timings.
+type Policy struct {
+	UndoWindow   time.Duration // collected → files deleted after this; undo allowed within it
+	AbandonAfter time.Duration // uploading drafts older than this are cancelled
+}
+
+func DefaultPolicy() Policy {
+	return Policy{UndoWindow: 10 * time.Minute, AbandonAfter: 60 * time.Minute}
+}
+
+// Effects the caller must carry out after a successful transition.
+type Effects struct {
+	IssueToken     bool       // assign lane + daily token (submit)
+	ScheduleDelete *time.Time // set delete_after on remaining files
+	ClearDelete    bool       // undo: restore the files' default expiry
+}
+
+// Transition applies an action to a job. It is pure: it mutates only the given job value
+// and returns the effects the store must execute in the same transaction.
+func Transition(job *Job, action Action, actor Actor, reason string, now time.Time, p Policy) (Effects, error) {
+	var fx Effects
+	from := job.State
+
 	switch action {
-	case "claim":
-		if j.State != JobStateNew {
-			return ErrInvalidTransition
+	case ActionSubmit:
+		if from != JobStateUploading || actor.Type != ActorGuest {
+			return fx, ErrInvalidTransition
 		}
-		j.State = JobStateClaimed
-		j.ClaimedAt = &now
-	case "ready":
-		if j.State != JobStateClaimed {
-			return ErrInvalidTransition
+		job.State = JobStateQueued
+		job.QueuedAt = &now
+		fx.IssueToken = true
+
+	case ActionEdit:
+		if !(from == JobStateUploading || from == JobStateQueued) {
+			return fx, ErrInvalidTransition
 		}
-		j.State = JobStateReady
-		j.ReadyAt = &now
-	case "collected":
-		if j.State != JobStateReady {
-			return ErrInvalidTransition
+
+	case ActionClaim:
+		if from != JobStateQueued || actor.Type != ActorStaff {
+			return fx, ErrInvalidTransition
 		}
-		j.State = JobStateCollected
-		j.CollectedAt = &now
-	case "cancel":
-		if j.State == JobStateCollected || j.State == JobStateCancelled {
-			return ErrInvalidTransition
+		job.State = JobStateClaimed
+		job.ClaimedAt = &now
+		job.ClaimedBy = actor.Name
+
+	case ActionRelease:
+		if from != JobStateClaimed || actor.Type != ActorStaff {
+			return fx, ErrInvalidTransition
 		}
-		j.State = JobStateCancelled
-	case "release":
-		if j.State != JobStateClaimed {
-			return ErrInvalidTransition
+		job.State = JobStateQueued // keeps QueuedAt, so it returns to the head of its lane
+		job.ClaimedAt = nil
+		job.ClaimedBy = ""
+
+	case ActionReady:
+		if from != JobStateClaimed || actor.Type != ActorStaff {
+			return fx, ErrInvalidTransition
 		}
-		j.State = JobStateNew
-		j.ClaimedAt = nil
+		job.State = JobStateReady
+		job.ReadyAt = &now
+
+	case ActionCollected:
+		if from != JobStateReady || actor.Type != ActorStaff {
+			return fx, ErrInvalidTransition
+		}
+		job.State = JobStateCollected
+		job.CollectedAt = &now
+		at := now.Add(p.UndoWindow)
+		fx.ScheduleDelete = &at
+
+	case ActionUndo:
+		if from != JobStateCollected || actor.Type != ActorStaff {
+			return fx, ErrInvalidTransition
+		}
+		if job.CollectedAt == nil || now.Sub(*job.CollectedAt) > p.UndoWindow || job.FilesDeletedAt != nil {
+			return fx, ErrWindowExpired
+		}
+		job.State = JobStateReady
+		job.CollectedAt = nil
+		fx.ClearDelete = true
+
+	case ActionCancel:
+		switch actor.Type {
+		case ActorGuest:
+			// Customers may cancel only before a counter picks the job up (BR-Q3).
+			if from != JobStateUploading && from != JobStateQueued {
+				return fx, ErrInvalidTransition
+			}
+		case ActorStaff:
+			if from != JobStateQueued && from != JobStateClaimed && from != JobStateReady {
+				return fx, ErrInvalidTransition
+			}
+			if reason == "" {
+				return fx, ErrReasonRequired
+			}
+		case ActorSystem:
+			if from.IsTerminal() {
+				return fx, ErrInvalidTransition
+			}
+		default:
+			return fx, ErrWrongActor
+		}
+		job.State = JobStateCancelled
+		job.CancelledAt = &now
+		job.CancelReason = reason
+		at := now
+		fx.ScheduleDelete = &at
+
+	case ActionAbandon:
+		if from != JobStateUploading || actor.Type != ActorSystem {
+			return fx, ErrInvalidTransition
+		}
+		job.State = JobStateCancelled
+		job.CancelledAt = &now
+		job.CancelReason = "abandoned"
+		at := now
+		fx.ScheduleDelete = &at
+
 	default:
-		return ErrInvalidTransition
+		return fx, ErrInvalidTransition
 	}
 
-	j.UpdatedAt = now
-	return nil
+	job.UpdatedAt = now
+	return fx, nil
 }

@@ -2,79 +2,129 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/smithy-go"
 )
 
-type Config struct {
-	Endpoint        string
-	Region          string
-	Bucket          string
-	AccessKey       string
-	SecretKey       string
-	PublicBaseURL   string
-	PresignDuration time.Duration
+type S3Config struct {
+	Endpoint  string
+	Region    string
+	Bucket    string
+	AccessKey string
+	SecretKey string
+	Durations Durations
 }
 
-func (c Config) Enabled() bool {
+func (c S3Config) Enabled() bool {
 	return c.Bucket != "" && c.AccessKey != "" && c.SecretKey != ""
 }
 
-type Presigner struct {
-	bucket   string
-	presign  *s3.PresignClient
-	duration time.Duration
+// S3Store talks to any S3-compatible service (Cloudflare R2 in production).
+type S3Store struct {
+	bucket  string
+	client  *s3.Client
+	presign *s3.PresignClient
+	dur     Durations
 }
 
-func NewPresigner(ctx context.Context, cfg Config) (*Presigner, error) {
+func NewS3Store(ctx context.Context, cfg S3Config) (*S3Store, error) {
 	if !cfg.Enabled() {
 		return nil, fmt.Errorf("storage config is incomplete")
 	}
 	if cfg.Region == "" {
 		cfg.Region = "auto"
 	}
-	if cfg.PresignDuration == 0 {
-		cfg.PresignDuration = 15 * time.Minute
+	if cfg.Durations.PutTTL == 0 {
+		cfg.Durations.PutTTL = 15 * time.Minute
 	}
-
-	awsCfg, err := config.LoadDefaultConfig(
-		ctx,
+	if cfg.Durations.GetTTL == 0 {
+		cfg.Durations.GetTTL = 5 * time.Minute
+	}
+	awsCfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion(cfg.Region),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, "")),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("load aws config: %w", err)
 	}
-
 	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		if cfg.Endpoint != "" {
 			o.BaseEndpoint = aws.String(cfg.Endpoint)
 			o.UsePathStyle = true
 		}
 	})
-
-	return &Presigner{
-		bucket:   cfg.Bucket,
-		presign:  s3.NewPresignClient(client),
-		duration: cfg.PresignDuration,
-	}, nil
+	return &S3Store{bucket: cfg.Bucket, client: client, presign: s3.NewPresignClient(client), dur: cfg.Durations}, nil
 }
 
-func (p *Presigner) PresignUpload(ctx context.Context, objectKey string, contentType string) (string, error) {
-	request, err := p.presign.PresignPutObject(ctx, &s3.PutObjectInput{
-		Bucket:      aws.String(p.bucket),
-		Key:         aws.String(objectKey),
-		ContentType: aws.String(contentType),
-	}, func(options *s3.PresignOptions) {
-		options.Expires = p.duration
-	})
+func (s *S3Store) PresignPut(ctx context.Context, key, contentType string, size int64) (string, map[string]string, error) {
+	req, err := s.presign.PresignPutObject(ctx, &s3.PutObjectInput{
+		Bucket:        aws.String(s.bucket),
+		Key:           aws.String(key),
+		ContentType:   aws.String(contentType),
+		ContentLength: aws.Int64(size),
+	}, func(o *s3.PresignOptions) { o.Expires = s.dur.PutTTL })
 	if err != nil {
-		return "", fmt.Errorf("presign put object: %w", err)
+		return "", nil, fmt.Errorf("presign put: %w", err)
 	}
-	return request.URL, nil
+	return req.URL, map[string]string{"Content-Type": contentType}, nil
+}
+
+func (s *S3Store) PresignGet(ctx context.Context, key, filename, contentType string) (string, error) {
+	req, err := s.presign.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket:                     aws.String(s.bucket),
+		Key:                        aws.String(key),
+		ResponseContentDisposition: aws.String(`inline; filename="` + safeFilename(filename) + `"`),
+		ResponseContentType:        aws.String(contentType),
+	}, func(o *s3.PresignOptions) { o.Expires = s.dur.GetTTL })
+	if err != nil {
+		return "", fmt.Errorf("presign get: %w", err)
+	}
+	return req.URL, nil
+}
+
+func (s *S3Store) Head(ctx context.Context, key string) (ObjectInfo, error) {
+	out, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key)})
+	if err != nil {
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) && (apiErr.ErrorCode() == "NotFound" || apiErr.ErrorCode() == "NoSuchKey") {
+			return ObjectInfo{}, ErrObjectNotFound
+		}
+		return ObjectInfo{}, err
+	}
+	info := ObjectInfo{}
+	if out.ContentLength != nil {
+		info.Size = *out.ContentLength
+	}
+	if out.ContentType != nil {
+		info.ContentType = *out.ContentType
+	}
+	return info, nil
+}
+
+func (s *S3Store) Delete(ctx context.Context, key string) error {
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key)})
+	if err != nil {
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) && (apiErr.ErrorCode() == "NotFound" || apiErr.ErrorCode() == "NoSuchKey") {
+			return nil
+		}
+	}
+	return err
+}
+
+func safeFilename(name string) string {
+	r := strings.NewReplacer(`"`, "", "\\", "", "\n", "", "\r", "")
+	name = r.Replace(name)
+	if name == "" {
+		return "file"
+	}
+	return name
 }

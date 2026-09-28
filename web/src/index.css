@@ -1,0 +1,89 @@
+@import '@fontsource/noto-sans/400.css';
+@import '@fontsource/noto-sans/500.css';
+@import '@fontsource/noto-sans/600.css';
+@import '@fontsource/noto-sans/700.css';
+@import '@fontsource/noto-sans-devanagari/400.css';
+@import '@fontsource/noto-sans-devanagari/600.css';
+@import '@fontsource/noto-sans-devanagari/700.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* design/DESIGN.md §2 — light is the default for every surface. */
+:root {
+  --ink: #0f172a;
+  --ink-muted: #334155;
+  --ink-subtle: #64748b;
+  --canvas: #f8fafc;
+  --surface: #ffffff;
+  --surface-tint: #eff4ff;
+  --border: #cbd5e1;
+  --divider: #e2e8f0;
+  --action: #2563eb;
+  --action-pressed: #1d4ed8;
+  --ready: #15803d;
+  --ready-bg: #dcfce7;
+  --attention: #b45309;
+  --attention-bg: #fef3c7;
+  --danger: #dc2626;
+  --danger-bg: #fee2e2;
+  color-scheme: light;
+}
+
+/* Dark theme: shop screens only, owner/staff choice (design/DESIGN.md §2). */
+[data-theme='dark'] {
+  --ink: #e2e8f0;
+  --ink-muted: #94a3b8;
+  --ink-subtle: #64748b;
+  --canvas: #0b1220;
+  --surface: #111a2e;
+  --surface-tint: #172554;
+  --border: #334155;
+  --divider: #1e293b;
+  --action: #3b82f6;
+  --action-pressed: #2563eb;
+  --ready: #22c55e;
+  --ready-bg: #052e16;
+  --attention: #f59e0b;
+  --attention-bg: #451a03;
+  --danger: #ef4444;
+  --danger-bg: #450a0a;
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+body {
+  @apply bg-canvas text-ink font-sans antialiased;
+  line-height: 1.5;
+}
+:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  .poster {
+    width: 210mm;
+    height: 297mm;
+    max-width: none;
+  }
+}

@@ -9,9 +9,17 @@ services:
       - "55433:5432"
     volumes:
       - counter_drop_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U counter_drop"]
+      interval: 5s
+      retries: 10
 
+  # Optional: only if you want to test the S3 code path locally.
+  # The API uses local-disk storage by default, so this is not needed for the MVP.
+  #   docker compose -f deploy/docker-compose.yml --profile s3 up -d
   minio:
-    image: quay.io/minio/minio:latest
+    profiles: ["s3"]
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: counterdrop

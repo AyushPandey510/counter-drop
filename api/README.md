@@ -1,133 +1,77 @@
 # Counter Drop API
 
-Go service for the Counter Drop customer upload flow, shop queue, staff actions, storage upload preparation, and future retention/payment work.
+Go 1.27 service (`net/http` + pgx on Postgres) for the R1a walk-in flow: QR drop page, tickets, staff PIN sign-in, live queue, pricing, daily tokens per lane, and the deletion worker.
 
-## Run Locally
-
-Start Postgres from the project root:
+## Run
 
 ```bash
-cd /home/ayush/counter-drop
-docker compose -f deploy/docker-compose.yml up -d postgres
+docker compose -f ../deploy/docker-compose.yml up -d postgres
+CD_DATABASE_URL='postgres://counter_drop:counter_drop@localhost:55433/counter_drop?sslmode=disable' go run ./cmd/api
 ```
 
-Run the API:
+Migrations in `migrations/` run at start-up. In dev the `demo-print` shop is seeded (Owner PIN `1234`, Kavita PIN `1111`). Files go to local disk (`.data/files`) unless all `CD_STORAGE_*` R2 values are set. All settings: `../deploy/.env.example`.
+
+Serve the PWA from the same process (one port, no CORS):
 
 ```bash
-cd /home/ayush/counter-drop/api
-CD_API_ADDR=:18080 \
-CD_DATABASE_URL='postgres://counter_drop:counter_drop@localhost:55433/counter_drop?sslmode=disable' \
-CD_STORAGE_ENDPOINT='http://localhost:9000' \
-CD_STORAGE_BUCKET='counter-drop-local' \
-CD_STORAGE_ACCESS_KEY='counterdrop' \
-CD_STORAGE_SECRET_KEY='counterdrop123' \
-go run ./cmd/api
+(cd ../web && npm install && npm run build)
+CD_WEB_DIR=../web/dist CD_DATABASE_URL=... go run ./cmd/api     # open http://localhost:8080
 ```
 
-Without `CD_DATABASE_URL`, the API falls back to an in-memory store for quick demos. Without complete storage config, job creation still works but responses will not include `uploadUrl`.
-
-## First Flow
-
-Check health and shop info:
+Create a real shop and staff:
 
 ```bash
-curl http://localhost:18080/health
-curl http://localhost:18080/api/v1/cd/shops/demo-print
+go run ./cmd/cdadmin create-shop -slug imran-xerox -name "Imran Xerox" -address "Station Rd, Pune" -owner Imran -pin 4821
+go run ./cmd/cdadmin add-staff -shop imran-xerox -name Sana -pin 7302 -role staff
 ```
 
-Create a job:
+## Layout
 
-```bash
-curl -X POST http://localhost:18080/api/v1/cd/shops/demo-print/jobs \
-  -H 'Content-Type: application/json' \
-  -d '{"customerName":"Ayush","files":[{"filename":"notes.pdf","size":12345,"mime":"application/pdf"}],"settings":{"copies":1,"color":"bw"}}'
-```
+| Package | What |
+| --- | --- |
+| `internal/domain` | Pure rules: job state machine and effects, pricing and page ranges, tokens, wait estimate, shop hours |
+| `internal/store` | Postgres: shops, staff and sessions, jobs and files, queue, retention |
+| `internal/httpapi` | Routes, auth middleware, `{data}` / `{error:{code,message}}` envelope, handlers, end-to-end tests |
+| `internal/realtime` | Server-Sent Events hub (job and shop topics) |
+| `internal/tasks` | Deletion worker and draft abandonment |
+| `internal/storage` | `ObjectStore`: R2/S3 presign, or local disk with HMAC-signed links |
+| `cmd/api`, `cmd/cdadmin` | Server and admin CLI |
 
-The response includes:
+## API (prefix `/api/v1/cd`)
 
-- `id`
-- `token`
-- `secret`
-- file `objectKey`
-- file `uploadStatus`
-- file `uploadUrl` when storage config is present
+Customer — the ticket secret goes in the `X-Ticket-Secret` header (or `?secret=` for the event stream only):
 
-After the browser uploads each file with `PUT uploadUrl`, submit the job:
+| Method | Path | |
+| --- | --- | --- |
+| GET | `/shops/{slug}` | Public shop: status, hours, prices, wait |
+| POST | `/shops/{slug}/jobs` | Create a draft with file metadata → ticket, secret, upload targets |
+| GET / PATCH | `/jobs/{id}` | Ticket; update name and per-file settings |
+| POST / DELETE | `/jobs/{id}/files[/{fileId}]` | Add / remove files |
+| POST | `/jobs/{id}/files/{fileId}/complete` | Confirm upload (server checks size and type) with page count |
+| POST | `/jobs/{id}/submit` | Send to counter (needs the quoted `priceVersion`) → token |
+| POST | `/jobs/{id}/cancel` | Cancel while in line |
+| GET | `/jobs/{id}/events` | SSE stream |
 
-```bash
-curl -X POST 'http://localhost:18080/api/v1/cd/jobs/JOB_ID/submit?secret=SECRET'
-```
+Shop — `Authorization: Bearer <session>`:
 
-Read the customer ticket:
-
-```bash
-curl 'http://localhost:18080/api/v1/cd/jobs/JOB_ID?secret=SECRET'
-```
-
-View the shop queue:
-
-```bash
-curl 'http://localhost:18080/api/v1/cd/shop/queue?shop=demo-print'
-```
-
-Move the job through staff actions:
-
-```bash
-curl -X POST http://localhost:18080/api/v1/cd/shop/jobs/JOB_ID/claim
-curl -X POST http://localhost:18080/api/v1/cd/shop/jobs/JOB_ID/ready
-curl -X POST http://localhost:18080/api/v1/cd/shop/jobs/JOB_ID/collected
-```
-
-Other supported staff actions are `cancel` and `release`.
-
-## Environment
-
-```bash
-CD_API_ADDR=:18080
-CD_DATABASE_URL=postgres://counter_drop:counter_drop@localhost:55433/counter_drop?sslmode=disable
-CD_STORAGE_ENDPOINT=http://localhost:9000
-CD_STORAGE_REGION=auto
-CD_STORAGE_BUCKET=counter-drop-local
-CD_STORAGE_ACCESS_KEY=counterdrop
-CD_STORAGE_SECRET_KEY=counterdrop123
-```
-
-
-## File Deletion Behavior
-
-When staff marks a job `collected`, each file is marked with `deleteStatus: pending` and a `deleteAfter` timestamp 15 minutes in the future. This gives the shop a short recovery window for accidental clicks.
-
-When staff `cancel`s a job, each file is marked `deleteStatus: pending` with `deleteAfter` set immediately.
-
-The next backend step is a deletion worker that will scan pending files, delete the storage objects, and set `deletedAt` / `deleteStatus: deleted`.
+| Method | Path | |
+| --- | --- | --- |
+| GET | `/shop/staff-names?shop=` | Names for the sign-in tiles |
+| POST | `/shop/login`, `/shop/logout`; GET `/shop/me` | PIN sign-in (5 wrong tries → 15 min lock) |
+| GET | `/shop/queue` | Board snapshot |
+| POST | `/shop/claim-next` | Claim the oldest job in a lane (`SKIP LOCKED`) |
+| POST | `/shop/jobs/{id}/{claim,release,ready,collected,undo,cancel}` | Actions |
+| GET | `/shop/jobs/{id}/files/{fileId}/url` | Short-lived download link |
+| GET | `/shop/lookup?q=` | Find by token or name |
+| PUT | `/shop/state` | Online / Paused / Offline |
+| GET / PUT | `/shop/settings` | Owner: profile, hours, prices |
+| GET | `/shop/deletion-health` | Owner: deletion backlog and failures |
+| GET | `/shop/events?token=` | SSE stream |
 
 ## Tests
 
-Run tests from this `api/` directory:
-
 ```bash
-go test ./...
+CD_TEST_DATABASE_URL='postgres://counter_drop:counter_drop@localhost:55433/counter_drop_test?sslmode=disable' go test ./...
 ```
 
-Running `go test ./...` from the repository root does not work because the root is a `go.work` workspace, not a Go module.
-
-## Structure
-
-```text
-api/
-├── cmd/api/                  # main package
-├── internal/config/          # env loading
-├── internal/domain/          # job state machine, shop, file upload state
-├── internal/httpapi/         # handlers, middleware, JSON envelope
-├── internal/store/           # memory and Postgres stores
-├── internal/storage/         # S3-compatible presigned uploads
-├── internal/realtime/        # future WebSocket topics
-├── internal/tasks/           # future cleanup and expiry workers
-├── migrations/               # SQL migrations
-├── queries/                  # future sqlc queries
-└── Dockerfile
-```
-
-## Storage Caveat
-
-The API generates presigned URLs without contacting storage, so this flow can be developed before local MinIO is fully working. Actual `PUT uploadUrl` testing still needs a working S3-compatible target such as Cloudflare R2 or a local MinIO image that pulls successfully on this machine.
+Create the test database once: `docker compose -f ../deploy/docker-compose.yml exec postgres createdb -U counter_drop counter_drop_test`. The end-to-end tests are skipped when `CD_TEST_DATABASE_URL` is not set.

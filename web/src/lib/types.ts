@@ -1,0 +1,160 @@
+// Mirrors the Go API (api/internal/domain, httpapi). Money is integer paise.
+
+export type JobState = 'uploading' | 'queued' | 'claimed' | 'ready' | 'collected' | 'cancelled'
+export type OnlineState = 'online' | 'paused' | 'offline'
+
+export interface FileSettings {
+  copies: number
+  colour: boolean
+  bothSides: boolean
+  pageRange?: string
+}
+
+export interface JobFile {
+  id: string
+  filename: string
+  size: number
+  mime: string
+  pages: number
+  pagesStatus: 'pending' | 'counted' | 'unknown'
+  settings: FileSettings
+  uploadStatus: 'pending' | 'uploaded'
+  deleteStatus: 'active' | 'pending' | 'deleted' | 'failed'
+  deleteAfter?: string
+  deletedAt?: string
+}
+
+export interface Job {
+  id: string
+  shopId: string
+  channel: 'walkin' | 'remote'
+  laneId?: string
+  lane?: string
+  token?: string
+  customerName?: string
+  files: JobFile[]
+  state: JobState
+  priceTotalPaise: number
+  pagesTotal: number
+  pagesToConfirm: boolean
+  readyBy?: string
+  claimedBy?: string
+  cancelReason?: string
+  paidMethod?: string
+  createdAt: string
+  updatedAt: string
+  queuedAt?: string
+  claimedAt?: string
+  readyAt?: string
+  collectedAt?: string
+  cancelledAt?: string
+  filesDeletedAt?: string
+}
+
+export interface PriceList {
+  bwOnePaise: number
+  bwBothPaise: number
+  colourOnePaise: number
+  colourBothPaise: number
+  minChargePaise: number
+  version: number
+}
+
+export interface Wait {
+  jobsAhead: number
+  lowMinutes: number
+  highMinutes: number
+}
+
+export interface PublicShop {
+  id: string
+  slug: string
+  name: string
+  address: string
+  onlineState: OnlineState
+  pauseMessage?: string
+  isOpen: boolean
+  opensAt: string
+  closesAt: string
+  prices: PriceList
+  colourAvailable: boolean
+  wait: Wait
+}
+
+export interface QuoteLine {
+  fileId: string
+  selectedPages: number
+  sheets: number
+  sides: number
+  copies: number
+  colour: boolean
+  bothSides: boolean
+  unitPaise: number
+  unit: 'side' | 'sheet'
+  amountPaise: number
+}
+
+export interface Quote {
+  lines: QuoteLine[]
+  subtotalPaise: number
+  minChargePaise: number
+  totalPaise: number
+  pagesTotal: number
+  pagesToConfirm: boolean
+  priceVersion: string
+}
+
+export interface Ticket {
+  job: Job
+  quote?: Quote
+  position: number
+  shop: PublicShop
+  undoUntil?: string
+  serverTime: string
+}
+
+export interface UploadTarget {
+  fileId: string
+  clientId: string
+  url: string
+  method: 'PUT'
+  headers: Record<string, string>
+}
+
+export interface Lane {
+  id: string
+  letter: string
+  name: string
+  rule: 'bw' | 'colour' | 'any'
+}
+
+export interface Shop {
+  id: string
+  slug: string
+  name: string
+  address: string
+  status: string
+  onlineState: OnlineState
+  pauseMessage?: string
+  timezone: string
+  opensAt: string
+  closesAt: string
+  prices: PriceList
+  lanes: Lane[]
+}
+
+export interface Staff {
+  id: string
+  shopId: string
+  name: string
+  role: 'owner' | 'staff'
+}
+
+export interface QueueSnapshot {
+  shop: Shop
+  jobs: Job[]
+  todayCount: number
+  wait: Wait
+  undoWindowSeconds: number
+  serverTime: string
+}
