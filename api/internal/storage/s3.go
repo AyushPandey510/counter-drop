@@ -77,12 +77,17 @@ func (s *S3Store) PresignPut(ctx context.Context, key, contentType string, size 
 	return req.URL, map[string]string{"Content-Type": contentType}, nil
 }
 
-func (s *S3Store) PresignGet(ctx context.Context, key, filename, contentType string) (string, error) {
+func (s *S3Store) PresignGet(ctx context.Context, key, filename, contentType string, download bool) (string, error) {
+	disp := "inline"
+	if download {
+		disp = "attachment"
+	}
 	req, err := s.presign.PresignGetObject(ctx, &s3.GetObjectInput{
 		Bucket:                     aws.String(s.bucket),
 		Key:                        aws.String(key),
-		ResponseContentDisposition: aws.String(`inline; filename="` + safeFilename(filename) + `"`),
+		ResponseContentDisposition: aws.String(disp + `; filename="` + safeFilename(filename) + `"`),
 		ResponseContentType:        aws.String(contentType),
+		ResponseCacheControl:       aws.String("private, no-store"),
 	}, func(o *s3.PresignOptions) { o.Expires = s.dur.GetTTL })
 	if err != nil {
 		return "", fmt.Errorf("presign get: %w", err)

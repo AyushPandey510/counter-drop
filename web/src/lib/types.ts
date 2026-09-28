@@ -22,6 +22,11 @@ export interface JobFile {
   deleteStatus: 'active' | 'pending' | 'deleted' | 'failed'
   deleteAfter?: string
   deletedAt?: string
+  printedAt?: string
+  printOpens: number
+  downloadedAt?: string
+  downloadedBy?: string
+  downloads: number
 }
 
 export interface Job {
@@ -49,6 +54,9 @@ export interface Job {
   collectedAt?: string
   cancelledAt?: string
   filesDeletedAt?: string
+  copiesDeleteRequestedAt?: string
+  copiesDeletedAt?: string
+  copiesDeletedBy?: string
 }
 
 export interface PriceList {
@@ -79,6 +87,7 @@ export interface PublicShop {
   prices: PriceList
   colourAvailable: boolean
   wait: Wait
+  holdDays: number
 }
 
 export interface QuoteLine {
@@ -110,6 +119,7 @@ export interface Ticket {
   position: number
   shop: PublicShop
   undoUntil?: string
+  holdUntil?: string
   serverTime: string
 }
 
@@ -141,6 +151,7 @@ export interface Shop {
   closesAt: string
   prices: PriceList
   lanes: Lane[]
+  holdDays: number
 }
 
 export interface Staff {
@@ -153,6 +164,7 @@ export interface Staff {
 export interface QueueSnapshot {
   shop: Shop
   jobs: Job[]
+  copiesToDelete: Job[]
   todayCount: number
   wait: Wait
   undoWindowSeconds: number

@@ -107,6 +107,40 @@ func (s *Store) AbandonDrafts(ctx context.Context) ([]domain.Job, error) {
 	return out, nil
 }
 
+// ExpireUncollected closes jobs that stayed in line, printing or ready longer than the shop's
+// hold days: they are cancelled as "not_collected" and their files are deleted by the worker.
+func (s *Store) ExpireUncollected(ctx context.Context) ([]domain.Job, error) {
+	now := s.now()
+	rows, err := s.pool.Query(ctx, `SELECT j.id FROM cd_jobs j JOIN cd_shops sh ON sh.id = j.shop_id
+		WHERE j.state IN ('queued', 'claimed', 'ready') AND j.queued_at < $1::timestamptz - make_interval(days => sh.hold_days)
+		LIMIT 200`, now)
+	if err != nil {
+		return nil, err
+	}
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, err
+	}
+	var out []domain.Job
+	for _, id := range ids {
+		err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+			j, err := lockJob(ctx, tx, id)
+			if err != nil {
+				return err
+			}
+			if err := s.apply(ctx, tx, &j, ActInput{Action: domain.ActionCancel, Actor: domain.Actor{Type: domain.ActorSystem, Name: "system"}, Reason: "not_collected"}); err != nil {
+				return err
+			}
+			out = append(out, j)
+			return nil
+		})
+		if err != nil && err != domain.ErrInvalidTransition {
+			return out, err
+		}
+	}
+	return out, nil
+}
+
 type DeletionHealth struct {
 	DueNow          int        `json:"dueNow"`
 	Deleted24h      int        `json:"deleted24h"`

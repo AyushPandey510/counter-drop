@@ -80,6 +80,13 @@ type JobFile struct {
 	DeleteStatus DeleteStatus `json:"deleteStatus"`
 	DeleteAfter  *time.Time   `json:"deleteAfter,omitempty"`
 	DeletedAt    *time.Time   `json:"deletedAt,omitempty"`
+
+	// What the shop did with the file. Downloads are shown to the customer.
+	PrintedAt    *time.Time `json:"printedAt,omitempty"`
+	PrintOpens   int        `json:"printOpens"`
+	DownloadedAt *time.Time `json:"downloadedAt,omitempty"`
+	DownloadedBy string     `json:"downloadedBy,omitempty"`
+	Downloads    int        `json:"downloads"`
 }
 
 type Job struct {
@@ -108,6 +115,21 @@ type Job struct {
 	CollectedAt    *time.Time `json:"collectedAt,omitempty"`
 	CancelledAt    *time.Time `json:"cancelledAt,omitempty"`
 	FilesDeletedAt *time.Time `json:"filesDeletedAt,omitempty"`
+
+	// Copies the shop downloaded: the customer can ask for them to be deleted; the shop confirms.
+	CopiesDeleteRequestedAt *time.Time `json:"copiesDeleteRequestedAt,omitempty"`
+	CopiesDeletedAt         *time.Time `json:"copiesDeletedAt,omitempty"`
+	CopiesDeletedBy         string     `json:"copiesDeletedBy,omitempty"`
+}
+
+// Downloaded reports whether the shop saved any of the job's files to its own device.
+func (j Job) Downloaded() bool {
+	for _, f := range j.Files {
+		if f.Downloads > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // Action is something a customer, staff member or the system does to a job.
@@ -153,7 +175,7 @@ func DefaultPolicy() Policy {
 type Effects struct {
 	IssueToken     bool       // assign lane + daily token (submit)
 	ScheduleDelete *time.Time // set delete_after on remaining files
-	ClearDelete    bool       // undo: restore the files' default expiry
+	ClearDelete    bool       // undo: the job is active again, so its files are kept
 }
 
 // Transition applies an action to a job. It is pure: it mutates only the given job value

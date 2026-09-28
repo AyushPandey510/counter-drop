@@ -25,6 +25,21 @@ Snapshot: 28 Sep 2026, after the MVP build. Verified by `go vet`, `go test ./...
 | 15–22 Web PWA | Done (MVP) | Home, drop page, ticket, shop login, board, settings, QR poster; EN/HI/MR customer screens; installable PWA |
 | 23+ | Not started | Admin console, R1b (Print nearby, UPI prepay), print agent, deploy pipeline |
 
+## Verification (28 Sep 2026)
+
+A 40-step browser audit on phone and desktop covered the customer flow (upload, page count, locked/oversize/wrong-type files, pricing incl. colour, both sides, copies and page ranges, tokens per lane, live ticket, cancel), the shop flow (PIN sign-in, lanes, claim/release/ready/collected/undo, staff cancel with reason, search, Online/Paused/Offline, owner price change, QR poster), file sharing (files downloaded by staff are byte-identical to what the customer sent; tampered or unsigned links refused; files stored under IDs, not names) and automatic deletion (files erased after the undo window, links stop working, receipt updates). All passed.
+
+Fixed during the audit: a file the customer removed before sending stayed attached to the job, so staff could see and open it until the deletion worker ran. Migration 0006 now hides removed files everywhere at once; covered by `TestRemovedFileNeverReachesCounter`.
+
+## File handling model (28 Sep 2026)
+
+- **Counter Drop's copy** is deleted automatically 10 minutes after pickup (or when the job is cancelled, or right away when the customer asks). Every deletion is checked: the file must really be gone before it is marked deleted.
+- **The shop chooses per file:** **Print** (opens in the browser, nothing saved) or **Download** (saved to the shop's device). Every download is recorded and the customer is told live on their ticket.
+- **The customer:** can cancel and withdraw their files while the job is in line; once printing starts the job is locked to the shop. After pickup they can ask the shop to delete downloaded copies.
+- **The shop confirms** with "Copies deleted"; the board keeps a to-do list of downloaded copies until then. Deleting the shop's own copies is the shop's responsibility — Counter Drop records it.
+- **Receipt:** amount, payment method, each file's status (printed / downloaded by whom and when), when Counter Drop's copy was deleted, and the shop's confirmation.
+- **Active jobs keep their files** (no deletion at closing time). Jobs not collected within the owner's setting (1–7 days, default 7) close as "not collected" and their files are deleted.
+
 ## Decisions taken while building (update BRD/FSD when convenient)
 
 | Decision | Why |

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { BellRing, Check, Lock, ShieldCheck, Share2 } from 'lucide-react'
+import { BellRing, Check, Download, Lock, ShieldCheck, Share2, Trash2 } from 'lucide-react'
 import { api, ApiError } from '@/lib/api'
 import { useI18n, type Key } from '@/lib/i18n'
-import { clock, mmss, rupees } from '@/lib/format'
+import { clock, dayTime, mmss, rupees } from '@/lib/format'
 import { chime, useLive } from '@/lib/live'
 import { findTicket, saveTicket } from '@/lib/tickets'
-import type { JobState, Ticket } from '@/lib/types'
+import type { Job, JobState, Ticket } from '@/lib/types'
 import { Banner, Button, Card, Spinner, stateMeta } from '@/components/ui'
 import { Shell } from './DropPage'
 
@@ -69,7 +69,15 @@ export default function TicketPage() {
   useEffect(() => {
     load()
   }, [load])
-  useLive(secret ? `/jobs/${jobId}/events?secret=${encodeURIComponent(secret)}` : null, () => load(), load)
+  useLive(
+    secret ? `/jobs/${jobId}/events?secret=${encodeURIComponent(secret)}` : null,
+    (e) => {
+      // A download is something the customer should notice even if the screen is idle.
+      if (e.type === 'file.downloaded') navigator.vibrate?.(200)
+      load()
+    },
+    load,
+  )
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000)
@@ -112,9 +120,11 @@ export default function TicketPage() {
   const serverNow = now + skew.current
   const isReady = job.state === 'ready'
   const isDone = job.state === 'collected' || job.state === 'cancelled'
+  const isActive = job.state === 'queued' || job.state === 'claimed' || job.state === 'ready'
   const idx = order[job.state]
   const deleteAt = ticket.undoUntil ? new Date(ticket.undoUntil).getTime() : 0
-  const filesCount = job.files.length
+  const downloaded = job.files.filter((f) => f.downloads > 0)
+  const fileName = (i: number) => job.files[i]?.filename || t('rFileN', { n: i + 1 })
 
   const cancel = async () => {
     if (!window.confirm(t('cancelConfirm'))) return
@@ -125,8 +135,27 @@ export default function TicketPage() {
     }
   }
 
+  const askDelete = async () => {
+    if (!window.confirm(t('askDeleteConfirm'))) return
+    try {
+      setTicket(await api<Ticket>(`/jobs/${jobId}/delete-request`, { body: {}, secret }))
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not send the request')
+    }
+  }
+
+  const ourCopy = job.filesDeletedAt ? t('rOurDeleted', { time: clock(job.filesDeletedAt) }) : deleteAt ? t('rOurDeleteIn', { time: mmss(deleteAt - serverNow) }) : ''
+  const shopCopies = shopCopiesText(job, t)
+
   const share = async () => {
-    const text = `Counter Drop · ${shop.name} · ${job.token}: ${t(filesCount === 1 ? 'deletedAt1' : 'deletedAt', { n: filesCount, time: clock(job.filesDeletedAt) })}`
+    const lines = [
+      `Counter Drop · ${shop.name} · ${job.token ?? ''}`,
+      job.state === 'collected' ? `${t('rAmount')}: ${rupees(job.priceTotalPaise)} · ${t('rPaid')}: ${paidLabel(job, t)}` : t(job.cancelReason === 'not_collected' ? 'notCollected' : 'cancelledNote'),
+      ...job.files.map((f, i) => `${fileName(i)} · ${fileStatus(f, t)}`),
+      `${t('rOurCopy')}: ${ourCopy}`,
+      `${t('rShopCopies')}: ${shopCopies}`,
+    ]
+    const text = lines.filter(Boolean).join('\n')
     try {
       if (navigator.share) await navigator.share({ text })
       else await navigator.clipboard.writeText(text)
@@ -160,6 +189,17 @@ export default function TicketPage() {
             )}
           </section>
 
+          {isActive && downloaded.length > 0 && (
+            <div role="status" className="space-y-1 rounded border-[1.5px] border-attention bg-attention-bg p-3 text-sm text-attention">
+              {downloaded.map((f) => (
+                <p key={f.id} className="flex items-start gap-2">
+                  <Download className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                  {t('downloadedNotice', { shop: shop.name, file: f.filename, time: clock(f.downloadedAt) })}
+                </p>
+              ))}
+            </div>
+          )}
+
           {job.state !== 'cancelled' && (
             <Card className="p-4">
               <ol className="flex items-start justify-between" aria-label="Status">
@@ -177,6 +217,7 @@ export default function TicketPage() {
                   )
                 })}
               </ol>
+              {isActive && ticket.holdUntil && <p className="mt-3 border-t border-divider pt-2 text-center text-xs text-ink-muted">{t('collectBy', { time: dayTime(ticket.holdUntil) })}</p>}
             </Card>
           )}
 
@@ -201,11 +242,11 @@ export default function TicketPage() {
           )}
         </div>
         <div className="space-y-3">
-          {quote && job.state !== 'cancelled' && (
+          {quote && !isDone && (
             <Card className="p-4">
               <div className="flex items-end justify-between">
                 <div>
-                  <div className="text-sm text-ink-muted">{job.state === 'collected' ? t('total') : job.pagesToConfirm ? t('priceAtCounter') : t('due')}</div>
+                  <div className="text-sm text-ink-muted">{job.pagesToConfirm ? t('priceAtCounter') : t('due')}</div>
                   <div className="font-mono text-2xl font-bold tabular">{rupees(job.priceTotalPaise || quote.totalPaise)}</div>
                 </div>
                 <div className="text-right text-sm text-ink-muted">
@@ -221,39 +262,99 @@ export default function TicketPage() {
             </Button>
           )}
 
-          {(job.state === 'collected' || job.state === 'cancelled') && (
+          {isDone && (
             <Card className="p-4">
-              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold">
-                <ShieldCheck className="h-6 w-6 text-ready" aria-hidden /> {t('receipt')}
-              </h2>
-              {job.state === 'collected' && job.collectedAt && <p className="text-sm text-ink-muted">{t('collectedAt', { time: clock(job.collectedAt) })}</p>}
-              {job.state === 'cancelled' && <p className="text-sm text-ink-muted">{t('cancelledNote')}</p>}
-              {job.filesDeletedAt ? (
-                <p className="mt-2 font-semibold text-ready">
-                  {t(filesCount === 1 ? 'deletedAt1' : 'deletedAt', {
-                    n: filesCount,
-                    time: clock(job.filesDeletedAt),
-                  })}
-                </p>
-              ) : deleteAt ? (
-                <p className="mt-2 font-semibold">{t('deleteIn', { time: mmss(deleteAt - serverNow) })}</p>
-              ) : null}
-              {job.filesDeletedAt && (
-                <Button variant="secondary" size="sm" className="mt-3" onClick={share}>
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-lg font-bold">
+                  <ShieldCheck className="h-6 w-6 text-ready" aria-hidden /> {t('receipt')}
+                </h2>
+                <div className="text-right text-xs text-ink-muted">
+                  <div className="font-semibold text-ink">{shop.name}</div>
+                  <div>
+                    <span className="font-mono">{job.token}</span> · {dayTime(job.collectedAt || job.cancelledAt)}
+                  </div>
+                </div>
+              </div>
+
+              {job.state === 'collected' ? (
+                <dl className="grid grid-cols-2 gap-2 rounded bg-surface-tint p-3 text-sm">
+                  <div>
+                    <dt className="text-ink-muted">{t('rAmount')}</dt>
+                    <dd className="font-mono text-xl font-bold tabular">{rupees(job.priceTotalPaise)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-muted">{t('rPaid')}</dt>
+                    <dd className="font-semibold">{paidLabel(job, t)}</dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="rounded bg-surface-tint p-3 text-sm text-ink-muted">{t(job.cancelReason === 'not_collected' ? 'notCollected' : 'cancelledNote')}</p>
+              )}
+
+              <h3 className="mb-1 mt-4 text-sm font-semibold uppercase tracking-wide text-ink-muted">{t('rFiles')}</h3>
+              <ul className="divide-y divide-divider text-sm">
+                {job.files.map((f, i) => (
+                  <li key={f.id} className="flex items-start justify-between gap-3 py-2">
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{fileName(i)}</span>
+                      <span className="text-xs text-ink-muted">{f.pages ? `${f.pages} pp` : ''}</span>
+                    </span>
+                    <span className={`shrink-0 text-right text-xs ${f.downloads > 0 ? 'font-semibold text-attention' : 'text-ink-muted'}`}>{fileStatus(f, t)}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <dl className="mt-3 space-y-2 border-t border-divider pt-3 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-muted">{t('rOurCopy')}</dt>
+                  <dd className={`text-right font-semibold ${job.filesDeletedAt ? 'text-ready' : ''}`}>{ourCopy}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-muted">{t('rShopCopies')}</dt>
+                  <dd className={`text-right font-semibold ${job.copiesDeletedAt || downloaded.length === 0 ? 'text-ready' : 'text-attention'}`}>{shopCopies}</dd>
+                </div>
+              </dl>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {job.state === 'collected' && downloaded.length > 0 && !job.copiesDeleteRequestedAt && !job.copiesDeletedAt && (
+                  <Button variant="danger" size="sm" onClick={askDelete}>
+                    <Trash2 className="h-4 w-4" aria-hidden /> {t('askDelete')}
+                  </Button>
+                )}
+                <Button variant="secondary" size="sm" onClick={share}>
                   <Share2 className="h-4 w-4" aria-hidden /> {t('shareReceipt')}
                 </Button>
-              )}
+              </div>
             </Card>
           )}
 
-          {(job.state === 'collected' || job.state === 'cancelled') && (
+          {isDone && (
             <Link to={`/s/${shop.slug}`} className="block text-center font-semibold text-action underline">
               {t('newJob')}
             </Link>
           )}
-          <p className="pb-6 lg:text-left text-center text-xs text-ink-muted">{t('help')}</p>
+          <p className="pb-6 text-center text-xs text-ink-muted lg:text-left">{t('help')}</p>
         </div>
       </div>
     </Shell>
   )
+}
+
+type T = (k: Key, v?: Record<string, string | number>) => string
+
+function paidLabel(job: Job, t: T): string {
+  return job.paidMethod === 'cash' ? t('rPaidCash') : job.paidMethod === 'upi' ? t('rPaidUpi') : t('rPaidCounter')
+}
+
+function fileStatus(f: Job['files'][number], t: T): string {
+  if (f.downloads > 0) return t('rDownloaded', { name: f.downloadedBy || '—', time: clock(f.downloadedAt) })
+  if (f.printOpens > 0) return t('rPrinted')
+  return t('rNotPrinted')
+}
+
+function shopCopiesText(job: Job, t: T): string {
+  if (!job.files.some((f) => f.downloads > 0)) return t('rShopNone')
+  if (job.copiesDeletedAt) return t('rShopDeleted', { name: job.copiesDeletedBy || '—', time: clock(job.copiesDeletedAt) })
+  if (job.copiesDeleteRequestedAt) return t('rShopRequested', { time: clock(job.copiesDeleteRequestedAt) })
+  return t('rShopPending')
 }

@@ -30,6 +30,7 @@ type Shop struct {
 	ClosesAt     string      `json:"closesAt"` // "21:30" local
 	Prices       PriceList   `json:"prices"`
 	Lanes        []Lane      `json:"lanes"`
+	HoldDays     int         `json:"holdDays"` // uncollected jobs close after this many days (1–7)
 }
 
 // Location returns the shop's time zone, falling back to IST.

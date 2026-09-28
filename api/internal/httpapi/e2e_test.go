@@ -150,9 +150,10 @@ func must[T any](t *testing.T, r resp, status int) T {
 }
 
 type ticketT struct {
-	Job      domain.Job   `json:"job"`
-	Quote    domain.Quote `json:"quote"`
-	Position int          `json:"position"`
+	Job       domain.Job   `json:"job"`
+	Quote     domain.Quote `json:"quote"`
+	Position  int          `json:"position"`
+	HoldUntil *time.Time   `json:"holdUntil"`
 }
 
 type upload struct {

@@ -61,7 +61,7 @@ export default function QrPage() {
         </ol>
 
         <footer className="w-full border-t border-[#ddd] pt-3 text-sm text-[#555]">
-          Files are deleted automatically 10 minutes after pickup · <span className="font-mono">{url.replace(/^https?:\/\//, '')}</span>
+          Counter Drop deletes your files 10 minutes after pickup · you're told if the shop downloads them · <span className="font-mono">{url.replace(/^https?:\/\//, '')}</span>
         </footer>
       </article>
     </div>

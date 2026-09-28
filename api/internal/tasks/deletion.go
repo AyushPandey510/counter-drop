@@ -3,6 +3,8 @@ package tasks
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -47,6 +49,16 @@ func (d *Deleter) RunOnce(ctx context.Context) {
 		}
 	}
 
+	if jobs, err := d.Store.ExpireUncollected(ctx); err != nil {
+		d.Logger.Error("expire uncollected jobs", "error", err)
+	} else {
+		for _, j := range jobs {
+			d.Logger.Info("job closed as not collected", "job_id", j.ID, "shop_id", j.ShopID)
+			d.Hub.Publish(realtime.JobTopic(j.ID), realtime.Event{Type: "job.updated", Data: map[string]any{"state": j.State, "id": j.ID}})
+			d.Hub.Publish(realtime.ShopTopic(j.ShopID), realtime.Event{Type: "queue.changed", Data: map[string]string{"jobId": j.ID}})
+		}
+	}
+
 	files, err := d.Store.ClaimDueFiles(ctx, 200)
 	if err != nil {
 		d.Logger.Error("list due files", "error", err)
@@ -54,7 +66,16 @@ func (d *Deleter) RunOnce(ctx context.Context) {
 	}
 	for _, f := range files {
 		if f.Key != "" {
-			if err := d.Objects.Delete(ctx, f.Key); err != nil {
+			err := d.Objects.Delete(ctx, f.Key)
+			if err == nil {
+				// Don't trust the delete call alone: the object must really be gone.
+				if _, herr := d.Objects.Head(ctx, f.Key); herr == nil {
+					err = errors.New("object still present after delete")
+				} else if !errors.Is(herr, storage.ErrObjectNotFound) {
+					err = fmt.Errorf("verify delete: %w", herr)
+				}
+			}
+			if err != nil {
 				attempts, _ := d.Store.MarkFileDeleteFailed(ctx, f.ID, err)
 				level := slog.LevelWarn
 				if attempts >= 3 {

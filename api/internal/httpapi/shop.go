@@ -166,19 +166,44 @@ func (s *Server) jobAction(w http.ResponseWriter, r *http.Request) {
 	writeData(w, 200, j)
 }
 
+// fileURL returns a short-lived link to a file. mode=print (default) opens it in the browser to print;
+// mode=download saves it to the shop's device, and the customer is told straight away.
 func (s *Server) fileURL(w http.ResponseWriter, r *http.Request) {
-	f, err := s.Store.FileForShop(r.Context(), principal(r.Context()).Staff.ShopID, r.PathValue("id"), r.PathValue("fileId"))
+	p := principal(r.Context())
+	f, err := s.Store.FileForShop(r.Context(), p.Staff.ShopID, r.PathValue("id"), r.PathValue("fileId"))
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	url, err := s.Objects.PresignGet(r.Context(), f.ObjectKey, f.Filename, f.Mime)
+	download := r.URL.Query().Get("mode") == "download"
+	url, err := s.Objects.PresignGet(r.Context(), f.ObjectKey, f.Filename, f.Mime, download)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	s.Logger.Info("file opened", "job_id", r.PathValue("id"), "file_id", f.ID, "staff_id", principal(r.Context()).Staff.ID)
+	j, err := s.Store.RecordFileAccess(r.Context(), r.PathValue("id"), f.ID, p.Staff.Name, download)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	s.Logger.Info("file accessed", "job_id", j.ID, "file_id", f.ID, "staff_id", p.Staff.ID, "download", download)
+	if download {
+		s.Hub.Publish(realtime.JobTopic(j.ID), realtime.Event{Type: "file.downloaded", Data: map[string]any{"fileId": f.ID, "by": p.Staff.Name}})
+		s.Hub.Publish(realtime.ShopTopic(j.ShopID), realtime.Event{Type: "queue.changed", Data: map[string]string{"jobId": j.ID}})
+	}
 	writeData(w, 200, map[string]string{"url": url})
+}
+
+// copiesDeleted: staff confirm they deleted the copies they downloaded.
+func (s *Server) copiesDeleted(w http.ResponseWriter, r *http.Request) {
+	p := principal(r.Context())
+	j, err := s.Store.MarkCopiesDeleted(r.Context(), p.Staff.ShopID, r.PathValue("id"), p.Staff.Name)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	s.publishJob(j, "queue.changed")
+	writeData(w, 200, j)
 }
 
 func (s *Server) lookup(w http.ResponseWriter, r *http.Request) {

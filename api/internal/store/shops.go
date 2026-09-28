@@ -21,13 +21,13 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-const shopColumns = `id, slug, name, address, status, online_state, pause_message, timezone, opens_at, closes_at, price_list`
+const shopColumns = `id, slug, name, address, status, online_state, pause_message, timezone, opens_at, closes_at, price_list, hold_days`
 
 func scanShop(row pgx.Row) (domain.Shop, error) {
 	var sh domain.Shop
 	var prices []byte
 	err := row.Scan(&sh.ID, &sh.Slug, &sh.Name, &sh.Address, &sh.Status, &sh.OnlineState, &sh.PauseMessage,
-		&sh.Timezone, &sh.OpensAt, &sh.ClosesAt, &prices)
+		&sh.Timezone, &sh.OpensAt, &sh.ClosesAt, &prices, &sh.HoldDays)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return sh, ErrNotFound
 	}
@@ -168,6 +168,7 @@ type ShopProfile struct {
 	Address  string `json:"address"`
 	OpensAt  string `json:"opensAt"`
 	ClosesAt string `json:"closesAt"`
+	HoldDays int    `json:"holdDays,omitempty"` // 0 keeps the current value
 }
 
 var hhmm = regexp.MustCompile(`^([01]\d|2[0-3]):[0-5]\d$`)
@@ -186,10 +187,16 @@ func (s *Store) UpdateShopSettings(ctx context.Context, shopID string, p ShopPro
 	if err != nil {
 		return domain.Shop{}, err
 	}
+	if p.HoldDays == 0 {
+		p.HoldDays = cur.HoldDays
+	}
+	if p.HoldDays < 1 || p.HoldDays > 7 {
+		return domain.Shop{}, fmt.Errorf("%w: uncollected jobs can be kept 1–7 days", domain.ErrValidation)
+	}
 	prices.Version = cur.Prices.Version + 1
 	b, _ := json.Marshal(prices)
-	if _, err := s.pool.Exec(ctx, `UPDATE cd_shops SET name = $2, address = $3, opens_at = $4, closes_at = $5, price_list = $6, updated_at = now() WHERE id = $1`,
-		shopID, strings.TrimSpace(p.Name), strings.TrimSpace(p.Address), p.OpensAt, p.ClosesAt, b); err != nil {
+	if _, err := s.pool.Exec(ctx, `UPDATE cd_shops SET name = $2, address = $3, opens_at = $4, closes_at = $5, price_list = $6, hold_days = $7, updated_at = now() WHERE id = $1`,
+		shopID, strings.TrimSpace(p.Name), strings.TrimSpace(p.Address), p.OpensAt, p.ClosesAt, b, p.HoldDays); err != nil {
 		return domain.Shop{}, err
 	}
 	return s.GetShopByID(ctx, shopID)

@@ -58,7 +58,8 @@ Customer — the ticket secret goes in the `X-Ticket-Secret` header (or `?secret
 | POST / DELETE | `/jobs/{id}/files[/{fileId}]` | Add / remove files |
 | POST | `/jobs/{id}/files/{fileId}/complete` | Confirm upload (server checks size and type) with page count |
 | POST | `/jobs/{id}/submit` | Send to counter (needs the quoted `priceVersion`) → token |
-| POST | `/jobs/{id}/cancel` | Cancel while in line |
+| POST | `/jobs/{id}/cancel` | Cancel and withdraw the files while in line |
+| POST | `/jobs/{id}/delete-request` | After pickup: delete Counter Drop's copy now and ask the shop to delete any copy it downloaded |
 | GET | `/jobs/{id}/events` | SSE stream |
 
 Shop — `Authorization: Bearer <session>`:
@@ -76,7 +77,8 @@ Shop — `Authorization: Bearer <session>`:
 | GET | `/shop/queue` | Board snapshot |
 | POST | `/shop/claim-next` | Claim the oldest job in a lane (`SKIP LOCKED`) |
 | POST | `/shop/jobs/{id}/{claim,release,ready,collected,undo,cancel}` | Actions |
-| GET | `/shop/jobs/{id}/files/{fileId}/url` | Short-lived download link |
+| GET | `/shop/jobs/{id}/files/{fileId}/url?mode=print\|download` | Short-lived link: `print` opens in the browser; `download` saves to the device and the customer is told live |
+| POST | `/shop/jobs/{id}/copies-deleted` | Shop confirms it deleted the copies it downloaded (shown on the customer's receipt) |
 | GET | `/shop/lookup?q=` | Find by token or name |
 | PUT | `/shop/state` | Online / Paused / Offline |
 | GET / PUT | `/shop/settings` | Owner: profile, hours, prices |

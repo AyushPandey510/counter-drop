@@ -21,8 +21,9 @@ type ObjectInfo struct {
 type ObjectStore interface {
 	// PresignPut returns a URL and the headers the client must send with its PUT.
 	PresignPut(ctx context.Context, key, contentType string, size int64) (url string, headers map[string]string, err error)
-	// PresignGet returns a short-lived URL to read the object inline.
-	PresignGet(ctx context.Context, key, filename, contentType string) (string, error)
+	// PresignGet returns a short-lived URL to read the object: shown in the browser (inline) for printing,
+	// or saved to disk (attachment) when download is true. Responses are never cached.
+	PresignGet(ctx context.Context, key, filename, contentType string, download bool) (string, error)
 	Head(ctx context.Context, key string) (ObjectInfo, error)
 	// Delete removes the object; a missing object is not an error.
 	Delete(ctx context.Context, key string) error

@@ -71,14 +71,19 @@ func (s *LocalStore) PresignPut(_ context.Context, key, contentType string, size
 	return s.baseURL + localPrefix + key + "?" + q.Encode(), map[string]string{"Content-Type": contentType}, nil
 }
 
-func (s *LocalStore) PresignGet(_ context.Context, key, filename, contentType string) (string, error) {
+func (s *LocalStore) PresignGet(_ context.Context, key, filename, contentType string, download bool) (string, error) {
 	exp := s.now().Add(s.dur.GetTTL).Unix()
+	disp := "inline"
+	if download {
+		disp = "attachment"
+	}
 	q := url.Values{}
 	q.Set("m", "GET")
 	q.Set("exp", strconv.FormatInt(exp, 10))
 	q.Set("ct", contentType)
 	q.Set("fn", filename)
-	q.Set("sig", s.sign("GET", key, exp, 0, contentType))
+	q.Set("d", disp)
+	q.Set("sig", s.sign("GET", key, exp, 0, contentType+"\n"+disp))
 	return s.baseURL + localPrefix + key + "?" + q.Encode(), nil
 }
 
@@ -163,7 +168,11 @@ func (s *LocalStore) Handler() http.Handler {
 			w.WriteHeader(http.StatusOK)
 		case http.MethodGet, http.MethodHead:
 			ct := q.Get("ct")
-			if q.Get("m") != "GET" || !hmac.Equal([]byte(q.Get("sig")), []byte(s.sign("GET", key, exp, 0, ct))) {
+			disp := q.Get("d")
+			if disp != "attachment" {
+				disp = "inline"
+			}
+			if q.Get("m") != "GET" || !hmac.Equal([]byte(q.Get("sig")), []byte(s.sign("GET", key, exp, 0, ct+"\n"+q.Get("d")))) {
 				http.Error(w, "bad signature", http.StatusForbidden)
 				return
 			}
@@ -175,7 +184,7 @@ func (s *LocalStore) Handler() http.Handler {
 			defer f.Close()
 			st, _ := f.Stat()
 			w.Header().Set("Content-Type", ct)
-			w.Header().Set("Content-Disposition", mime.FormatMediaType("inline", map[string]string{"filename": safeFilename(q.Get("fn"))}))
+			w.Header().Set("Content-Disposition", mime.FormatMediaType(disp, map[string]string{"filename": safeFilename(q.Get("fn"))}))
 			w.Header().Set("Cache-Control", "private, no-store")
 			http.ServeContent(w, r, "", st.ModTime(), f)
 		case http.MethodOptions:

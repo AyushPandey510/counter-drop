@@ -24,12 +24,13 @@ type publicShop struct {
 	Prices          domain.PriceList    `json:"prices"`
 	ColourAvailable bool                `json:"colourAvailable"`
 	Wait            domain.WaitEstimate `json:"wait"`
+	HoldDays        int                 `json:"holdDays"`
 }
 
 func toPublic(sh domain.Shop, wait domain.WaitEstimate) publicShop {
 	return publicShop{ID: sh.ID, Slug: sh.Slug, Name: sh.Name, Address: sh.Address, OnlineState: sh.OnlineState,
 		PauseMessage: sh.PauseMessage, IsOpen: sh.IsOpen(time.Now()), OpensAt: sh.OpensAt, ClosesAt: sh.ClosesAt,
-		Prices: sh.Prices, ColourAvailable: sh.Prices.ColourAvailable(), Wait: wait}
+		Prices: sh.Prices, ColourAvailable: sh.Prices.ColourAvailable(), Wait: wait, HoldDays: sh.HoldDays}
 }
 
 func (s *Server) getShop(w http.ResponseWriter, r *http.Request) {
@@ -66,6 +67,7 @@ type ticket struct {
 	Position   int           `json:"position"`
 	Shop       publicShop    `json:"shop"`
 	UndoUntil  *time.Time    `json:"undoUntil,omitempty"` // files deleted at/after this
+	HoldUntil  *time.Time    `json:"holdUntil,omitempty"` // collect by: an uncollected job closes after this
 	ServerTime time.Time     `json:"serverTime"`
 }
 
@@ -87,7 +89,14 @@ func (s *Server) ticketFor(r *http.Request, j domain.Job) (ticket, error) {
 	}
 	if j.State == domain.JobStateCollected && j.CollectedAt != nil {
 		u := j.CollectedAt.Add(s.Cfg.UndoWindow)
+		if j.CopiesDeleteRequestedAt != nil && j.CopiesDeleteRequestedAt.Before(u) {
+			u = *j.CopiesDeleteRequestedAt
+		}
 		t.UndoUntil = &u
+	}
+	if (j.State == domain.JobStateQueued || j.State == domain.JobStateClaimed || j.State == domain.JobStateReady) && j.QueuedAt != nil {
+		h := j.QueuedAt.Add(time.Duration(sh.HoldDays) * 24 * time.Hour)
+		t.HoldUntil = &h
 	}
 	return t, nil
 }
@@ -322,6 +331,17 @@ func (s *Server) submitJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.publishJob(j, "queue.job_added")
+	s.respondTicket(w, r, j, 200)
+}
+
+// requestDeletion: after pickup the customer asks for their files to be deleted (ours now, the shop's downloads next).
+func (s *Server) requestDeletion(w http.ResponseWriter, r *http.Request) {
+	j, err := s.Store.RequestCopiesDeletion(r.Context(), r.PathValue("id"))
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	s.publishJob(j, "queue.changed")
 	s.respondTicket(w, r, j, 200)
 }
 

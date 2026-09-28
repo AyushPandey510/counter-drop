@@ -70,6 +70,30 @@ export default function DropPage() {
 
   const openTicket = useMemo(() => savedTickets().find((x) => x.slug === slug && x.token), [slug])
 
+  // Uploads finish in parallel and each response carries a price snapshot. Apply a snapshot only if
+  // no newer request has already been answered, so an out-of-order reply can't show a stale total.
+  const seq = useRef(0)
+  const applied = useRef(0)
+  const [syncing, setSyncing] = useState(0)
+  const nextSeq = () => ++seq.current
+  const applyIf = (my: number, tk: Ticket) => {
+    if (my > applied.current) {
+      applied.current = my
+      setTicket(tk)
+    }
+  }
+  const track = async (req: () => Promise<Ticket>): Promise<Ticket> => {
+    const my = nextSeq()
+    setSyncing((n) => n + 1)
+    try {
+      const tk = await req()
+      applyIf(my, tk)
+      return tk
+    } finally {
+      setSyncing((n) => n - 1)
+    }
+  }
+
   const patchFile = (clientId: string, patch: Partial<LocalFile>) => setFiles((fs) => fs.map((f) => (f.clientId === clientId ? { ...f, ...patch } : f)))
 
   // Upload one file to its presigned URL, then tell the API it's done (with the page count).
@@ -82,9 +106,8 @@ export default function DropPage() {
         (p) => patchFile(lf.clientId, { progress: p }),
         (w) => patchFile(lf.clientId, { status: w ? 'waiting' : 'uploading' }),
       )
-      const tk = await api<Ticket>(`/jobs/${j.id}/files/${target.fileId}/complete`, { body: { pages: lf.pages }, secret: j.secret })
+      await track(() => api<Ticket>(`/jobs/${j.id}/files/${target.fileId}/complete`, { body: { pages: lf.pages }, secret: j.secret }))
       patchFile(lf.clientId, { status: 'done', progress: 1 })
-      setTicket(tk)
     } catch (e) {
       patchFile(lf.clientId, {
         status: 'error',
@@ -156,6 +179,7 @@ export default function DropPage() {
       let j = jobRef.current
       let uploads: UploadTarget[]
       if (!j) {
+        const my = nextSeq()
         const res = await api<{
           ticket: Ticket
           secret: string
@@ -163,20 +187,16 @@ export default function DropPage() {
         }>(`/shops/${slug}/jobs`, { body: { files: meta } })
         j = { id: res.ticket.job.id, secret: res.secret }
         setJob(j)
-        setTicket(res.ticket)
+        applyIf(my, res.ticket)
         uploads = res.uploads
         if (settings.colour || settings.bothSides || settings.copies !== 1) {
-          api<Ticket>(`/jobs/${j.id}`, {
-            method: 'PATCH',
-            body: { applyToAll: settings },
-            secret: j.secret,
-          })
-            .then(setTicket)
-            .catch(() => {})
+          const jj = j
+          track(() => api<Ticket>(`/jobs/${jj.id}`, { method: 'PATCH', body: { applyToAll: settings }, secret: jj.secret })).catch(() => {})
         }
       } else {
+        const my = nextSeq()
         const res = await api<{ ticket: Ticket; uploads: UploadTarget[] }>(`/jobs/${j.id}/files`, { body: { files: meta }, secret: j.secret })
-        setTicket(res.ticket)
+        applyIf(my, res.ticket)
         uploads = res.uploads
       }
       const byClient = new Map(uploads.map((u) => [u.clientId, u]))
@@ -191,6 +211,8 @@ export default function DropPage() {
           }
         }),
       )
+      // One final read so the price shown is exactly what the server will charge.
+      await track(() => api<Ticket>(`/jobs/${jobNow.id}`, { secret: jobNow.secret })).catch(() => {})
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : t('uploadFailed')
       setError(msg)
@@ -203,12 +225,7 @@ export default function DropPage() {
     setFiles((fs) => fs.filter((f) => f.clientId !== lf.clientId))
     if (job && lf.fileId) {
       try {
-        setTicket(
-          await api<Ticket>(`/jobs/${job.id}/files/${lf.fileId}`, {
-            method: 'DELETE',
-            secret: job.secret,
-          }),
-        )
+        await track(() => api<Ticket>(`/jobs/${job.id}/files/${lf.fileId}`, { method: 'DELETE', secret: job.secret }))
       } catch {
         /* the draft expires anyway */
       }
@@ -227,13 +244,7 @@ export default function DropPage() {
     setSettings(next)
     if (!job) return
     try {
-      setTicket(
-        await api<Ticket>(`/jobs/${job.id}`, {
-          method: 'PATCH',
-          body: { applyToAll: next },
-          secret: job.secret,
-        }),
-      )
+      await track(() => api<Ticket>(`/jobs/${job.id}`, { method: 'PATCH', body: { applyToAll: next }, secret: job.secret }))
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not update settings')
     }
@@ -243,20 +254,8 @@ export default function DropPage() {
     patchFile(lf.clientId, { pageRange: range })
     if (!job || !lf.fileId) return
     try {
-      setTicket(
-        await api<Ticket>(`/jobs/${job.id}`, {
-          method: 'PATCH',
-          body: {
-            files: [
-              {
-                fileId: lf.fileId,
-                settings: { ...settings, pageRange: range },
-              },
-            ],
-          },
-          secret: job.secret,
-        }),
-      )
+      const fileId = lf.fileId
+      await track(() => api<Ticket>(`/jobs/${job.id}`, { method: 'PATCH', body: { files: [{ fileId, settings: { ...settings, pageRange: range } }] }, secret: job.secret }))
       patchFile(lf.clientId, { error: undefined })
     } catch (e) {
       patchFile(lf.clientId, {
@@ -289,8 +288,7 @@ export default function DropPage() {
       navigate(`/t/${job.id}`, { replace: true })
     } catch (e) {
       if (e instanceof ApiError && e.code === 'price_changed') {
-        const tk = await api<Ticket>(`/jobs/${job.id}`, { secret: job.secret })
-        setTicket(tk)
+        await track(() => api<Ticket>(`/jobs/${job.id}`, { secret: job.secret }))
       }
       setError(e instanceof ApiError ? e.message : 'Could not send. Try again.')
       setSending(false)
@@ -556,7 +554,7 @@ export default function DropPage() {
               {priceCard}
               {privacy}
               <div className="sticky bottom-0 -mx-4 border-t border-line bg-canvas px-4 py-3 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0">
-                <Button size="lg" className="w-full" onClick={send} disabled={!allUploaded || sending || !quote}>
+                <Button size="lg" className="w-full" onClick={send} disabled={!allUploaded || sending || !quote || syncing > 0}>
                   {sending ? <Spinner /> : null}
                   {sending ? t('sending') : !allUploaded ? t('uploading') : t('send')}
                   {quote && allUploaded && !sending ? <span className="ml-auto rounded bg-white/15 px-2 font-mono text-sm">{rupees(quote.totalPaise)}</span> : null}

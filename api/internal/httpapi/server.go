@@ -54,6 +54,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST "+p+"/jobs/{id}/files/{fileId}/complete", s.guest(s.completeFile))
 	mux.HandleFunc("POST "+p+"/jobs/{id}/submit", s.guest(s.submitJob))
 	mux.HandleFunc("POST "+p+"/jobs/{id}/cancel", s.guest(s.cancelJob))
+	mux.HandleFunc("POST "+p+"/jobs/{id}/delete-request", s.guest(s.requestDeletion))
 	mux.HandleFunc("POST "+p+"/jobs/{id}/pay", s.guest(s.payJob))
 	mux.HandleFunc("GET "+p+"/jobs/{id}/events", s.jobEvents)
 
@@ -72,6 +73,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET "+p+"/shop/queue", s.staff(s.queue))
 	mux.HandleFunc("POST "+p+"/shop/claim-next", s.staff(s.claimNext))
 	mux.HandleFunc("POST "+p+"/shop/jobs/{id}/{action}", s.staff(s.jobAction))
+	mux.HandleFunc("POST "+p+"/shop/jobs/{id}/copies-deleted", s.staff(s.copiesDeleted))
 	mux.HandleFunc("GET "+p+"/shop/jobs/{id}/files/{fileId}/url", s.staff(s.fileURL))
 	mux.HandleFunc("GET "+p+"/shop/lookup", s.staff(s.lookup))
 	mux.HandleFunc("PUT "+p+"/shop/state", s.staff(s.setState))

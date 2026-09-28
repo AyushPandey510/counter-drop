@@ -18,6 +18,7 @@ type Form = {
   colourOne: string
   colourBoth: string
   minCharge: string
+  holdDays: string
 }
 
 const toRs = (p: number) => (p ? String(p / 100) : '')
@@ -34,6 +35,7 @@ function fromShop(s: Shop): Form {
     colourOne: toRs(s.prices.colourOnePaise),
     colourBoth: toRs(s.prices.colourBothPaise),
     minCharge: toRs(s.prices.minChargePaise),
+    holdDays: String(s.holdDays || 7),
   }
 }
 
@@ -74,7 +76,7 @@ export default function SettingsPage() {
     try {
       const s = await call<Shop>('/shop/settings', {
         method: 'PUT',
-        body: { profile: { name: form.name.trim(), address: form.address.trim(), opensAt: form.opensAt, closesAt: form.closesAt }, prices },
+        body: { profile: { name: form.name.trim(), address: form.address.trim(), opensAt: form.opensAt, closesAt: form.closesAt, holdDays: Number(form.holdDays) }, prices },
       })
       setShop(s)
       setForm(fromShop(s))
@@ -120,6 +122,15 @@ export default function SettingsPage() {
                 <input type="time" className={input} value={form.closesAt} onChange={set('closesAt')} required />
               </Field>
             </div>
+            <Field label="Close uncollected jobs after" hint="Jobs not collected by then are closed and their files deleted. Customers see the date on their ticket.">
+              <select className={input} value={form.holdDays} onChange={(e) => setForm({ ...form, holdDays: e.target.value })}>
+                {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+                  <option key={d} value={d}>
+                    {d} day{d === 1 ? '' : 's'}
+                  </option>
+                ))}
+              </select>
+            </Field>
             <p className="text-xs text-ink-muted">
               Link name: <span className="font-mono">{session.shop.slug}</span> (fixed — it's printed on your QR poster)
             </p>

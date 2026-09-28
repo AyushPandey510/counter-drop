@@ -17,7 +17,8 @@ import (
 const jobColumns = `j.id, j.shop_id, j.channel, COALESCE(j.lane_id, ''), COALESCE(l.letter, ''), COALESCE(j.token, ''),
 	COALESCE(j.customer_name, ''), j.state, j.price_total_paise, j.pages_total, j.pages_to_confirm, j.ready_by,
 	j.claimed_by, j.cancel_reason, j.paid_method, COALESCE(j.business_day::text, ''), j.created_at, j.updated_at,
-	j.queued_at, j.claimed_at, j.ready_at, j.collected_at, j.cancelled_at, j.files_deleted_at`
+	j.queued_at, j.claimed_at, j.ready_at, j.collected_at, j.cancelled_at, j.files_deleted_at,
+	j.copies_delete_requested_at, j.copies_deleted_at, j.copies_deleted_by`
 
 const jobFrom = ` FROM cd_jobs j LEFT JOIN cd_lanes l ON l.id = j.lane_id `
 
@@ -27,7 +28,7 @@ func scanJob(row pgx.Row) (domain.Job, error) {
 	err := row.Scan(&j.ID, &j.ShopID, &j.Channel, &j.LaneID, &j.Lane, &j.Token, &j.CustomerName, &state,
 		&j.PriceTotal, &j.PagesTotal, &j.PagesToConfirm, &j.ReadyBy, &j.ClaimedBy, &j.CancelReason, &j.PaidMethod,
 		&j.BusinessDay, &j.CreatedAt, &j.UpdatedAt, &j.QueuedAt, &j.ClaimedAt, &j.ReadyAt, &j.CollectedAt,
-		&j.CancelledAt, &j.FilesDeletedAt)
+		&j.CancelledAt, &j.FilesDeletedAt, &j.CopiesDeleteRequestedAt, &j.CopiesDeletedAt, &j.CopiesDeletedBy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return j, ErrNotFound
 	}
@@ -37,7 +38,7 @@ func scanJob(row pgx.Row) (domain.Job, error) {
 }
 
 const fileColumns = `id, job_id, filename, size_bytes, mime, pages, pages_status, settings, COALESCE(object_key, ''),
-	upload_status, delete_status, delete_after, deleted_at`
+	upload_status, delete_status, delete_after, deleted_at, printed_at, print_opens, downloaded_at, downloaded_by, downloads`
 
 type querier interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
@@ -54,7 +55,7 @@ func attachFiles(ctx context.Context, q querier, jobs []*domain.Job) error {
 		ids[i] = j.ID
 		byID[j.ID] = j
 	}
-	rows, err := q.Query(ctx, `SELECT `+fileColumns+` FROM cd_job_files WHERE job_id = ANY($1) ORDER BY created_at, id`, ids)
+	rows, err := q.Query(ctx, `SELECT `+fileColumns+` FROM cd_job_files WHERE job_id = ANY($1) AND removed_at IS NULL ORDER BY created_at, id`, ids)
 	if err != nil {
 		return err
 	}
@@ -64,7 +65,8 @@ func attachFiles(ctx context.Context, q querier, jobs []*domain.Job) error {
 		var jobID string
 		var settings []byte
 		if err := rows.Scan(&f.ID, &jobID, &f.Filename, &f.Size, &f.Mime, &f.Pages, &f.PagesStatus, &settings,
-			&f.ObjectKey, &f.UploadStatus, &f.DeleteStatus, &f.DeleteAfter, &f.DeletedAt); err != nil {
+			&f.ObjectKey, &f.UploadStatus, &f.DeleteStatus, &f.DeleteAfter, &f.DeletedAt,
+			&f.PrintedAt, &f.PrintOpens, &f.DownloadedAt, &f.DownloadedBy, &f.Downloads); err != nil {
 			return err
 		}
 		_ = json.Unmarshal(settings, &f.Settings)
@@ -313,8 +315,9 @@ func (s *Store) RemoveFile(ctx context.Context, jobID, fileID string) (domain.Jo
 		if j.State != domain.JobStateUploading {
 			return ErrNotEditable
 		}
-		tag, err := tx.Exec(ctx, `UPDATE cd_job_files SET delete_status = 'pending', delete_after = $3
-			WHERE id = $2 AND job_id = $1 AND delete_status = 'active'`, jobID, fileID, s.now())
+		// Removed files vanish from the job at once (nobody can see or open them) and are erased on the next worker run.
+		tag, err := tx.Exec(ctx, `UPDATE cd_job_files SET delete_status = 'pending', delete_after = $3, removed_at = $3
+			WHERE id = $2 AND job_id = $1 AND delete_status = 'active' AND removed_at IS NULL`, jobID, fileID, s.now())
 		if err == nil && tag.RowsAffected() == 0 {
 			return ErrNotFound
 		}
@@ -485,6 +488,11 @@ func (s *Store) Submit(ctx context.Context, jobID, priceVersion, name string) (d
 			j.ID, now, j.LaneID, j.Token, j.BusinessDay, quote.TotalPaise, quote.PagesTotal, quote.PagesToConfirm, readyBy, j.CustomerName); err != nil {
 			return err
 		}
+		// While the job is in line, printing or ready its files are kept (no deletion at closing time);
+		// they are scheduled for deletion when it is collected, cancelled or closed as not collected.
+		if _, err := tx.Exec(ctx, `UPDATE cd_job_files SET delete_after = NULL WHERE job_id = $1 AND delete_status = 'active'`, j.ID); err != nil {
+			return err
+		}
 		return logEvent(ctx, tx, j, domain.JobStateUploading, domain.ActionSubmit, domain.Actor{Type: domain.ActorGuest}, "")
 	})
 	if err != nil {
@@ -561,16 +569,8 @@ func (s *Store) apply(ctx context.Context, tx pgx.Tx, j *domain.Job, in ActInput
 		}
 	}
 	if fx.ClearDelete {
-		sh, err := s.GetShopByID(ctx, j.ShopID)
-		if err != nil {
-			return err
-		}
-		expiry := sh.ClosingTime(now)
-		if cap := j.CreatedAt.Add(24 * time.Hour); expiry.After(cap) || !expiry.After(now) {
-			expiry = cap
-		}
-		if _, err := tx.Exec(ctx, `UPDATE cd_job_files SET delete_status = 'active', delete_after = $2
-			WHERE job_id = $1 AND deleted_at IS NULL`, j.ID, expiry); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE cd_job_files SET delete_status = 'active', delete_after = NULL
+			WHERE job_id = $1 AND deleted_at IS NULL AND removed_at IS NULL`, j.ID); err != nil {
 			return err
 		}
 	}
@@ -605,12 +605,14 @@ func (s *Store) ClaimNext(ctx context.Context, shopID, lane string, actor domain
 // --- queue, lookup, wait ----------------------------------------------------------------
 
 type QueueSnapshot struct {
-	Shop       domain.Shop         `json:"shop"`
-	Jobs       []domain.Job        `json:"jobs"`
-	TodayCount int                 `json:"todayCount"`
-	Wait       domain.WaitEstimate `json:"wait"`
-	UndoWindow int                 `json:"undoWindowSeconds"`
-	ServerTime time.Time           `json:"serverTime"`
+	Shop domain.Shop  `json:"shop"`
+	Jobs []domain.Job `json:"jobs"`
+	// Finished jobs whose files the shop downloaded and hasn't yet confirmed deleting (last 30 days).
+	CopiesToDelete []domain.Job        `json:"copiesToDelete"`
+	TodayCount     int                 `json:"todayCount"`
+	Wait           domain.WaitEstimate `json:"wait"`
+	UndoWindow     int                 `json:"undoWindowSeconds"`
+	ServerTime     time.Time           `json:"serverTime"`
 }
 
 // Queue returns today's live board: queued, claimed, ready, and jobs collected within the undo window.
@@ -647,7 +649,11 @@ func (s *Store) Queue(ctx context.Context, shopID string) (QueueSnapshot, error)
 	if err != nil {
 		return QueueSnapshot{}, err
 	}
-	return QueueSnapshot{Shop: sh, Jobs: jobs, TodayCount: today, Wait: wait, UndoWindow: int(s.policy.UndoWindow.Seconds()), ServerTime: now}, nil
+	copies, err := s.copiesToDelete(ctx, shopID, now)
+	if err != nil {
+		return QueueSnapshot{}, err
+	}
+	return QueueSnapshot{Shop: sh, Jobs: jobs, CopiesToDelete: copies, TodayCount: today, Wait: wait, UndoWindow: int(s.policy.UndoWindow.Seconds()), ServerTime: now}, nil
 }
 
 type rowQuerier interface {
@@ -750,4 +756,128 @@ func (s *Store) FileForGuest(ctx context.Context, jobID, fileID string) (domain.
 		}
 	}
 	return j, domain.JobFile{}, ErrNotFound
+}
+
+// --- what the shop did with the files ------------------------------------------------------
+
+// RecordFileAccess notes that staff opened a file to print it or downloaded it to their device.
+func (s *Store) RecordFileAccess(ctx context.Context, jobID, fileID, staffName string, download bool) (domain.Job, error) {
+	now := s.now()
+	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		j, err := lockJob(ctx, tx, jobID)
+		if err != nil {
+			return err
+		}
+		sql := `UPDATE cd_job_files SET print_opens = print_opens + 1, printed_at = COALESCE(printed_at, $3) WHERE id = $2 AND job_id = $1`
+		action := domain.Action("file_print")
+		if download {
+			sql = `UPDATE cd_job_files SET downloads = downloads + 1, downloaded_at = COALESCE(downloaded_at, $3),
+				downloaded_by = CASE WHEN downloaded_by = '' THEN $4 ELSE downloaded_by END WHERE id = $2 AND job_id = $1`
+			action = "file_download"
+			// A new download means there is (again) a copy the shop must delete.
+			if _, err := tx.Exec(ctx, `UPDATE cd_jobs SET copies_deleted_at = NULL, copies_deleted_by = '' WHERE id = $1`, jobID); err != nil {
+				return err
+			}
+		}
+		args := []any{jobID, fileID, now}
+		if download {
+			args = append(args, staffName)
+		}
+		if _, err := tx.Exec(ctx, sql, args...); err != nil {
+			return err
+		}
+		return logEvent(ctx, tx, j, j.State, action, domain.Actor{Type: domain.ActorStaff, Name: staffName}, fileID)
+	})
+	if err != nil {
+		return domain.Job{}, err
+	}
+	return s.GetJob(ctx, jobID)
+}
+
+// RequestCopiesDeletion is the customer asking, after pickup, for their files to be deleted.
+// Counter Drop's own copy is deleted right away. If the shop never downloaded anything there is
+// nothing more to do; otherwise the shop is asked to delete its downloaded copies and confirm.
+func (s *Store) RequestCopiesDeletion(ctx context.Context, jobID string) (domain.Job, error) {
+	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		j, err := lockJob(ctx, tx, jobID)
+		if err != nil {
+			return err
+		}
+		if j.State != domain.JobStateCollected {
+			return domain.ErrInvalidTransition
+		}
+		if j.CopiesDeleteRequestedAt != nil {
+			return nil
+		}
+		now := s.now()
+		if _, err := tx.Exec(ctx, `UPDATE cd_jobs SET copies_delete_requested_at = $2, updated_at = $2 WHERE id = $1`, jobID, now); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `UPDATE cd_job_files SET delete_status = 'pending', delete_after = $2
+			WHERE job_id = $1 AND deleted_at IS NULL AND (delete_after IS NULL OR delete_after > $2)`, jobID, now); err != nil {
+			return err
+		}
+		if !j.Downloaded() && j.CopiesDeletedAt == nil {
+			if _, err := tx.Exec(ctx, `UPDATE cd_jobs SET copies_deleted_at = $2, copies_deleted_by = 'no-downloads' WHERE id = $1`, jobID, now); err != nil {
+				return err
+			}
+		}
+		return logEvent(ctx, tx, j, j.State, "delete_requested", domain.Actor{Type: domain.ActorGuest, Name: "customer"}, "")
+	})
+	if err != nil {
+		return domain.Job{}, err
+	}
+	return s.GetJob(ctx, jobID)
+}
+
+// MarkCopiesDeleted is the shop confirming it deleted the copies it downloaded.
+func (s *Store) MarkCopiesDeleted(ctx context.Context, shopID, jobID, staffName string) (domain.Job, error) {
+	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		j, err := lockJob(ctx, tx, jobID)
+		if err != nil {
+			return err
+		}
+		if j.ShopID != shopID || j.State == domain.JobStateUploading {
+			return ErrNotFound
+		}
+		if j.State != domain.JobStateCollected && j.State != domain.JobStateCancelled {
+			return fmt.Errorf("%w: finish the job first (collected or cancelled)", domain.ErrValidation)
+		}
+		if !j.Downloaded() {
+			return fmt.Errorf("%w: nothing from this job was downloaded", domain.ErrValidation)
+		}
+		if j.CopiesDeletedAt != nil {
+			return nil
+		}
+		now := s.now()
+		if _, err := tx.Exec(ctx, `UPDATE cd_jobs SET copies_deleted_at = $2, copies_deleted_by = $3, updated_at = $2 WHERE id = $1`,
+			jobID, now, staffName); err != nil {
+			return err
+		}
+		return logEvent(ctx, tx, j, j.State, "copies_deleted", domain.Actor{Type: domain.ActorStaff, Name: staffName}, "")
+	})
+	if err != nil {
+		return domain.Job{}, err
+	}
+	return s.GetJob(ctx, jobID)
+}
+
+func (s *Store) copiesToDelete(ctx context.Context, shopID string, now time.Time) ([]domain.Job, error) {
+	rows, err := s.pool.Query(ctx, `SELECT `+jobColumns+jobFrom+`
+		WHERE j.shop_id = $1 AND j.state IN ('collected', 'cancelled') AND j.copies_deleted_at IS NULL
+		  AND j.updated_at > $2
+		  AND EXISTS (SELECT 1 FROM cd_job_files f WHERE f.job_id = j.id AND f.downloads > 0)
+		ORDER BY j.copies_delete_requested_at DESC NULLS LAST, j.collected_at DESC NULLS LAST LIMIT 100`, shopID, now.Add(-30*24*time.Hour))
+	if err != nil {
+		return nil, err
+	}
+	jobs, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (domain.Job, error) { return scanJob(r) })
+	if err != nil {
+		return nil, err
+	}
+	ptrs := make([]*domain.Job, len(jobs))
+	for i := range jobs {
+		ptrs[i] = &jobs[i]
+	}
+	return jobs, attachFiles(ctx, s.pool, ptrs)
 }

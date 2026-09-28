@@ -35,3 +35,11 @@ export function bytes(n: number): string {
   if (n < 1024 * 1024) return `${Math.max(1, Math.round(n / 1024))} KB`
   return `${(n / 1024 / 1024).toFixed(1)} MB`
 }
+
+const dayTimeFmt = new Intl.DateTimeFormat('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })
+
+/** ISO → "Sat, 3 Oct, 6:40 pm" in IST. */
+export function dayTime(iso?: string): string {
+  if (!iso) return ''
+  return dayTimeFmt.format(new Date(iso)).replace('AM', 'am').replace('PM', 'pm')
+}
