@@ -1,0 +1,52 @@
+.git
+.github
+Claude outputs
+.agent
+.codex
+
+# local env/secrets
+.env
+.env.*
+deploy/.env
+deploy/prod.env
+deploy/**/.env
+*.pem
+*.key
+secrets/
+
+# build outputs and caches
+bin/
+api/bin/
+agent/bin/
+web/dist/
+web/dev-dist/
+web/.vite/
+web/coverage/
+web/playwright-report/
+web/test-results/
+web/tsconfig.tsbuildinfo
+*.tsbuildinfo
+coverage.*
+*.coverprofile
+
+# dependencies copied/installed inside Docker stages
+node_modules/
+web/node_modules/
+vendor/
+
+# local data/logs
+.data/
+api/.data/
+tmp/
+logs/
+*.log
+*.sqlite
+*.db
+*.dump
+*.sql.gz
+
+# editor/os
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

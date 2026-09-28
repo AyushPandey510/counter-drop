@@ -24,7 +24,7 @@ type S3Config struct {
 }
 
 func (c S3Config) Enabled() bool {
-	return c.Bucket != "" && c.AccessKey != "" && c.SecretKey != ""
+	return c.Bucket != ""
 }
 
 // S3Store talks to any S3-compatible service (Cloudflare R2 in production).
@@ -48,10 +48,14 @@ func NewS3Store(ctx context.Context, cfg S3Config) (*S3Store, error) {
 	if cfg.Durations.GetTTL == 0 {
 		cfg.Durations.GetTTL = 5 * time.Minute
 	}
-	awsCfg, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion(cfg.Region),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, "")),
-	)
+	loadOpts := []func(*config.LoadOptions) error{config.WithRegion(cfg.Region)}
+	if cfg.AccessKey != "" || cfg.SecretKey != "" {
+		if cfg.AccessKey == "" || cfg.SecretKey == "" {
+			return nil, fmt.Errorf("storage access key and secret key must be set together")
+		}
+		loadOpts = append(loadOpts, config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, "")))
+	}
+	awsCfg, err := config.LoadDefaultConfig(ctx, loadOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("load aws config: %w", err)
 	}

@@ -553,7 +553,11 @@ export default function DropPage() {
               </Card>
               {priceCard}
               {privacy}
-              <div className="sticky bottom-0 -mx-4 border-t border-line bg-canvas px-4 py-3 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0">
+              <div className="sticky bottom-0 -mx-4 grid grid-cols-[auto,minmax(0,1fr)] gap-2 border-t border-line bg-canvas px-4 py-3 lg:static lg:mx-0 lg:block lg:border-0 lg:bg-transparent lg:p-0">
+                <Button variant="secondary" size="lg" className="px-3 lg:mb-2 lg:w-full" onClick={() => inputRef.current?.click()} disabled={sending}>
+                  <Plus className="h-5 w-5" aria-hidden />
+                  <span className="hidden sm:inline">{t('addMore')}</span>
+                </Button>
                 <Button size="lg" className="w-full" onClick={send} disabled={!allUploaded || sending || !quote || syncing > 0}>
                   {sending ? <Spinner /> : null}
                   {sending ? t('sending') : !allUploaded ? t('uploading') : t('send')}

@@ -1,115 +1,1197 @@
 openapi: 3.1.0
 info:
   title: Counter Drop API
-  version: 0.1.0
+  version: 0.2.0
+  description: |
+    REST API for the Counter Drop walk-in print workflow.
+
+    JSON responses are wrapped as either `{ "data": ... }` or
+    `{ "error": { "code", "message" } }`. Customer ticket routes use
+    `X-Ticket-Secret`; SSE routes put credentials in the query string because
+    EventSource cannot send custom headers.
 servers:
   - url: http://localhost:8080
+    description: Local default
+  - url: http://localhost:18080
+    description: Local demo
+tags:
+  - name: Health
+  - name: Customer
+  - name: Shop Auth
+  - name: Shop Staff
+  - name: Shop Queue
+  - name: Shop Settings
+security: []
 paths:
   /health:
     get:
+      tags: [Health]
       summary: Health check
       responses:
         "200":
-          description: Service is healthy
+          description: Service is reachable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /ready:
+    get:
+      tags: [Health]
+      summary: Readiness check
+      responses:
+        "200":
+          description: Database is reachable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyResponse"
+        "503":
+          $ref: "#/components/responses/Error"
+
   /api/v1/cd/shops/{slug}:
     get:
+      tags: [Customer]
       summary: Get public shop information
       parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/ShopSlug"
       responses:
         "200":
-          description: Shop found
+          description: Public shop information
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/DataEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/PublicShop"
         "404":
-          description: Shop not found
+          $ref: "#/components/responses/Error"
+
   /api/v1/cd/shops/{slug}/jobs:
     post:
-      summary: Create a customer print job
+      tags: [Customer]
+      summary: Create an upload draft for a walk-in print job
       parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/ShopSlug"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJobRequest"
       responses:
         "201":
-          description: Job created
-        "400":
-          description: Invalid request
+          description: Draft created with upload targets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateJobResponse"
+        "400": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
   /api/v1/cd/jobs/{id}:
     get:
-      summary: Get customer job status
+      tags: [Customer]
+      summary: Get a customer ticket
+      security:
+        - TicketSecret: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: secret
-          in: query
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/JobID"
+      responses:
+        "200": { $ref: "#/components/responses/Ticket" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+    patch:
+      tags: [Customer]
+      summary: Update customer name or file print settings before printing starts
+      security:
+        - TicketSecret: []
+      parameters:
+        - $ref: "#/components/parameters/JobID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateJobRequest"
+      responses:
+        "200": { $ref: "#/components/responses/Ticket" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/jobs/{id}/files:
+    post:
+      tags: [Customer]
+      summary: Add more files to an upload draft
+      security:
+        - TicketSecret: []
+      parameters:
+        - $ref: "#/components/parameters/JobID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [files]
+              properties:
+                files:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/NewFile"
       responses:
         "200":
-          description: Job found
-        "403":
-          description: Invalid job secret
+          description: Ticket and new upload targets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddFilesResponse"
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/jobs/{id}/files/{fileId}:
+    delete:
+      tags: [Customer]
+      summary: Remove a file from a draft job
+      security:
+        - TicketSecret: []
+      parameters:
+        - $ref: "#/components/parameters/JobID"
+        - $ref: "#/components/parameters/FileID"
+      responses:
+        "200": { $ref: "#/components/responses/Ticket" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/jobs/{id}/files/{fileId}/complete:
+    post:
+      tags: [Customer]
+      summary: Mark a direct file upload complete after storage verification
+      security:
+        - TicketSecret: []
+      parameters:
+        - $ref: "#/components/parameters/JobID"
+        - $ref: "#/components/parameters/FileID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pages:
+                  type: integer
+                  minimum: 0
+                  default: 0
+      responses:
+        "200": { $ref: "#/components/responses/Ticket" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
   /api/v1/cd/jobs/{id}/submit:
     post:
-      summary: Submit a job after direct file uploads finish
+      tags: [Customer]
+      summary: Submit a draft job to the shop queue
+      security:
+        - TicketSecret: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/JobID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                priceVersion:
+                  type: string
+                customerName:
+                  type: string
+      responses:
+        "200": { $ref: "#/components/responses/Ticket" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/jobs/{id}/cancel:
+    post:
+      tags: [Customer]
+      summary: Cancel a customer job before the shop starts printing
+      security:
+        - TicketSecret: []
+      parameters:
+        - $ref: "#/components/parameters/JobID"
+      responses:
+        "200": { $ref: "#/components/responses/Ticket" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/jobs/{id}/delete-request:
+    post:
+      tags: [Customer]
+      summary: Ask the shop to delete downloaded local copies
+      security:
+        - TicketSecret: []
+      parameters:
+        - $ref: "#/components/parameters/JobID"
+      responses:
+        "200": { $ref: "#/components/responses/Ticket" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/jobs/{id}/pay:
+    post:
+      tags: [Customer]
+      summary: Payment placeholder; walk-in jobs are paid at the counter
+      security:
+        - TicketSecret: []
+      parameters:
+        - $ref: "#/components/parameters/JobID"
+      responses:
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/jobs/{id}/events:
+    get:
+      tags: [Customer]
+      summary: Stream ticket updates with Server-Sent Events
+      parameters:
+        - $ref: "#/components/parameters/JobID"
         - name: secret
           in: query
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         "200":
-          description: Job submitted
-        "403":
-          description: Invalid job secret
-  /api/v1/cd/shop/queue:
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema: { type: string }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/staff-names:
     get:
-      summary: Get the shop queue
+      tags: [Shop Auth]
+      summary: List staff names for the login screen
       parameters:
         - name: shop
           in: query
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         "200":
-          description: Queue snapshot
-        "400":
-          description: Missing shop query parameter
-        "404":
-          description: Shop not found
-  /api/v1/cd/shop/jobs/{id}/{action}:
+          description: Shop name and staff names
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffNamesResponse"
+
+  /api/v1/cd/shop/login:
     post:
-      summary: Apply a staff action to a job
+      tags: [Shop Auth]
+      summary: Sign in with shop slug, staff name, and PIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200": { $ref: "#/components/responses/AuthSession" }
+        "401": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/logout:
+    post:
+      tags: [Shop Auth]
+      summary: Revoke the current staff session
+      security:
+        - BearerAuth: []
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "401": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/me:
+    get:
+      tags: [Shop Auth]
+      summary: Get the current staff session
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Current staff, shop, and session expiry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSessionResponse"
+        "401": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/me/pin:
+    put:
+      tags: [Shop Auth]
+      summary: Change the current staff member's PIN
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPin, newPin]
+              properties:
+                currentPin: { type: string }
+                newPin: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "401": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/setup/info:
+    post:
+      tags: [Shop Auth]
+      summary: Inspect a one-time setup/reset link token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "200":
+          description: Setup link information
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/DataEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/SetupInfo"
+        "410": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/setup:
+    post:
+      tags: [Shop Auth]
+      summary: Complete setup/reset by choosing a PIN and signing in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, pin]
+              properties:
+                token: { type: string }
+                pin: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/AuthSession" }
+        "410": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/staff:
+    get:
+      tags: [Shop Staff]
+      summary: List active staff members
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Staff list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListStaffResponse"
+        "403": { $ref: "#/components/responses/Error" }
+    post:
+      tags: [Shop Staff]
+      summary: Invite a new staff member and return a one-time setup link
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                role:
+                  type: string
+                  enum: [owner, staff]
+                  default: staff
+      responses:
+        "201":
+          description: Staff member and setup link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffLinkResponse"
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/staff/{id}/link:
+    post:
+      tags: [Shop Staff]
+      summary: Issue a fresh setup or reset link for a staff member
+      security:
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
+      responses:
+        "200":
+          description: One-time link
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/DataEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          link:
+                            $ref: "#/components/schemas/SetupLink"
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/staff/{id}:
+    delete:
+      tags: [Shop Staff]
+      summary: Remove a staff member
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/queue:
+    get:
+      tags: [Shop Queue]
+      summary: Get the current shop queue board
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Queue snapshot
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/DataEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/QueueSnapshot"
+        "401": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/claim-next:
+    post:
+      tags: [Shop Queue]
+      summary: Claim the next queued job in a lane
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lane:
+                  type: string
+                  example: A
+      responses:
+        "200": { $ref: "#/components/responses/Job" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/jobs/{id}/{action}:
+    post:
+      tags: [Shop Queue]
+      summary: Apply a staff action to a job
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/JobID"
         - name: action
           in: path
           required: true
           schema:
             type: string
-            enum: [claim, ready, collected, cancel, release]
+            enum: [claim, release, ready, collected, undo, cancel]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Required for staff cancel.
+                paid:
+                  type: string
+                  description: Optional payment method recorded on collect.
+      responses:
+        "200": { $ref: "#/components/responses/Job" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/jobs/{id}/copies-deleted:
+    post:
+      tags: [Shop Queue]
+      summary: Confirm the shop deleted downloaded local copies
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/JobID"
+      responses:
+        "200": { $ref: "#/components/responses/Job" }
+
+  /api/v1/cd/shop/jobs/{id}/files/{fileId}/url:
+    get:
+      tags: [Shop Queue]
+      summary: Get a short-lived file URL for printing or downloading
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/JobID"
+        - $ref: "#/components/parameters/FileID"
+        - name: mode
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [print, download]
+            default: print
       responses:
         "200":
-          description: Job updated
-        "409":
-          description: Invalid state transition
+          description: Signed file URL
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/DataEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          url:
+                            type: string
+                            format: uri
+
+  /api/v1/cd/shop/lookup:
+    get:
+      tags: [Shop Queue]
+      summary: Search today's open jobs by token or customer prefix
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Matching jobs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/DataEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Job"
+
+  /api/v1/cd/shop/state:
+    put:
+      tags: [Shop Settings]
+      summary: Set the shop intake state
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [state]
+              properties:
+                state:
+                  $ref: "#/components/schemas/OnlineState"
+                message:
+                  type: string
+                  maxLength: 140
+      responses:
+        "200": { $ref: "#/components/responses/Shop" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/settings:
+    get:
+      tags: [Shop Settings]
+      summary: Get shop settings
+      security:
+        - BearerAuth: []
+      responses:
+        "200": { $ref: "#/components/responses/Shop" }
+    put:
+      tags: [Shop Settings]
+      summary: Update shop profile and prices
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateShopSettingsRequest"
+      responses:
+        "200": { $ref: "#/components/responses/Shop" }
+        "403": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/events:
+    get:
+      tags: [Shop Queue]
+      summary: Stream shop queue updates with Server-Sent Events
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema: { type: string }
+        "401": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/deletion-health:
+    get:
+      tags: [Shop Settings]
+      summary: Get file deletion worker health
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Deletion health
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/DataEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/DeletionHealth"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+    TicketSecret:
+      type: apiKey
+      in: header
+      name: X-Ticket-Secret
+
+  parameters:
+    ShopSlug:
+      name: slug
+      in: path
+      required: true
+      schema: { type: string }
+      example: demo-print
+    JobID:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      example: job_7a22fc0e6676294b
+    FileID:
+      name: fileId
+      in: path
+      required: true
+      schema: { type: string }
+      example: file_4b9198b242c09174
+
+  responses:
+    Error:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    OK:
+      description: Operation succeeded
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/DataEnvelope"
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      ok: { type: boolean }
+    Ticket:
+      description: Customer ticket
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TicketResponse"
+    Job:
+      description: Job
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/DataEnvelope"
+              - type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Job"
+    Shop:
+      description: Shop
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/DataEnvelope"
+              - type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Shop"
+    AuthSession:
+      description: Auth session
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AuthSessionResponse"
+
+  schemas:
+    DataEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data: {}
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: object
+              additionalProperties: true
+    HealthResponse:
+      allOf:
+        - $ref: "#/components/schemas/DataEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                status: { type: string, example: ok }
+                time: { type: string, format: date-time }
+    ReadyResponse:
+      allOf:
+        - $ref: "#/components/schemas/DataEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                status: { type: string, example: ready }
+
+    OnlineState:
+      type: string
+      enum: [online, paused, offline]
+    JobState:
+      type: string
+      enum: [uploading, queued, claimed, ready, collected, cancelled]
+    UploadStatus:
+      type: string
+      enum: [pending, uploaded]
+    DeleteStatus:
+      type: string
+      enum: [active, pending, deleted, failed]
+    PagesStatus:
+      type: string
+      enum: [pending, counted, unknown]
+
+    PriceList:
+      type: object
+      properties:
+        bwOnePaise: { type: integer, format: int64 }
+        bwBothPaise: { type: integer, format: int64 }
+        colourOnePaise: { type: integer, format: int64 }
+        colourBothPaise: { type: integer, format: int64 }
+        minChargePaise: { type: integer, format: int64 }
+        version: { type: integer }
+    FileSettings:
+      type: object
+      properties:
+        copies: { type: integer, minimum: 1, maximum: 99, default: 1 }
+        colour: { type: boolean, default: false }
+        bothSides: { type: boolean, default: false }
+        pageRange: { type: string, example: "1-3,5" }
+    QuoteLine:
+      type: object
+      properties:
+        fileId: { type: string }
+        selectedPages: { type: integer }
+        sheets: { type: integer }
+        sides: { type: integer }
+        copies: { type: integer }
+        colour: { type: boolean }
+        bothSides: { type: boolean }
+        unitPaise: { type: integer, format: int64 }
+        unit: { type: string, enum: [side, sheet, ""] }
+        amountPaise: { type: integer, format: int64 }
+    Quote:
+      type: object
+      properties:
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/QuoteLine" }
+        subtotalPaise: { type: integer, format: int64 }
+        minChargePaise: { type: integer, format: int64 }
+        totalPaise: { type: integer, format: int64 }
+        pagesTotal: { type: integer }
+        pagesToConfirm: { type: boolean }
+        priceVersion: { type: string }
+
+    WaitEstimate:
+      type: object
+      properties:
+        jobsAhead: { type: integer }
+        pagesAhead: { type: integer }
+        minutes: { type: integer }
+        label: { type: string }
+    Lane:
+      type: object
+      properties:
+        id: { type: string }
+        letter: { type: string }
+        name: { type: string }
+        rule: { type: string, enum: [bw, colour, any] }
+    Shop:
+      type: object
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        name: { type: string }
+        address: { type: string }
+        status: { type: string, enum: [live, suspended] }
+        onlineState: { $ref: "#/components/schemas/OnlineState" }
+        pauseMessage: { type: string }
+        timezone: { type: string }
+        opensAt: { type: string, example: "09:00" }
+        closesAt: { type: string, example: "21:30" }
+        prices: { $ref: "#/components/schemas/PriceList" }
+        lanes:
+          type: array
+          items: { $ref: "#/components/schemas/Lane" }
+        holdDays: { type: integer }
+    PublicShop:
+      type: object
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        name: { type: string }
+        address: { type: string }
+        onlineState: { $ref: "#/components/schemas/OnlineState" }
+        pauseMessage: { type: string }
+        isOpen: { type: boolean }
+        opensAt: { type: string }
+        closesAt: { type: string }
+        prices: { $ref: "#/components/schemas/PriceList" }
+        colourAvailable: { type: boolean }
+        wait: { $ref: "#/components/schemas/WaitEstimate" }
+        holdDays: { type: integer }
+
+    JobFile:
+      type: object
+      properties:
+        id: { type: string }
+        filename: { type: string }
+        size: { type: integer, format: int64 }
+        mime: { type: string }
+        pages: { type: integer }
+        pagesStatus: { $ref: "#/components/schemas/PagesStatus" }
+        settings: { $ref: "#/components/schemas/FileSettings" }
+        uploadStatus: { $ref: "#/components/schemas/UploadStatus" }
+        deleteStatus: { $ref: "#/components/schemas/DeleteStatus" }
+        deleteAfter: { type: string, format: date-time }
+        deletedAt: { type: string, format: date-time }
+        printedAt: { type: string, format: date-time }
+        printOpens: { type: integer }
+        downloadedAt: { type: string, format: date-time }
+        downloadedBy: { type: string }
+        downloads: { type: integer }
+    Job:
+      type: object
+      properties:
+        id: { type: string }
+        shopId: { type: string }
+        channel: { type: string, enum: [walkin, remote] }
+        laneId: { type: string }
+        lane: { type: string }
+        token: { type: string }
+        customerName: { type: string }
+        files:
+          type: array
+          items: { $ref: "#/components/schemas/JobFile" }
+        state: { $ref: "#/components/schemas/JobState" }
+        priceTotalPaise: { type: integer, format: int64 }
+        pagesTotal: { type: integer }
+        pagesToConfirm: { type: boolean }
+        readyBy: { type: string, format: date-time }
+        claimedBy: { type: string }
+        cancelReason: { type: string }
+        paidMethod: { type: string }
+        businessDay: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        queuedAt: { type: string, format: date-time }
+        claimedAt: { type: string, format: date-time }
+        readyAt: { type: string, format: date-time }
+        collectedAt: { type: string, format: date-time }
+        cancelledAt: { type: string, format: date-time }
+        filesDeletedAt: { type: string, format: date-time }
+        copiesDeleteRequestedAt: { type: string, format: date-time }
+        copiesDeletedAt: { type: string, format: date-time }
+        copiesDeletedBy: { type: string }
+    Ticket:
+      type: object
+      properties:
+        job: { $ref: "#/components/schemas/Job" }
+        quote: { $ref: "#/components/schemas/Quote" }
+        position: { type: integer }
+        shop: { $ref: "#/components/schemas/PublicShop" }
+        undoUntil: { type: string, format: date-time }
+        holdUntil: { type: string, format: date-time }
+        serverTime: { type: string, format: date-time }
+    TicketResponse:
+      allOf:
+        - $ref: "#/components/schemas/DataEnvelope"
+        - type: object
+          properties:
+            data: { $ref: "#/components/schemas/Ticket" }
+
+    NewFile:
+      type: object
+      required: [filename, size, mime]
+      properties:
+        clientId: { type: string }
+        filename: { type: string }
+        size: { type: integer, format: int64 }
+        mime:
+          type: string
+          enum: [application/pdf, image/jpeg, image/png, image/heic, image/webp]
+    UploadTarget:
+      type: object
+      properties:
+        fileId: { type: string }
+        clientId: { type: string }
+        url: { type: string, format: uri }
+        method: { type: string, example: PUT }
+        headers:
+          type: object
+          additionalProperties: { type: string }
+    CreateJobRequest:
+      type: object
+      required: [files]
+      properties:
+        customerName: { type: string }
+        files:
+          type: array
+          items: { $ref: "#/components/schemas/NewFile" }
+    CreateJobResponse:
+      allOf:
+        - $ref: "#/components/schemas/DataEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                ticket: { $ref: "#/components/schemas/Ticket" }
+                secret: { type: string }
+                uploads:
+                  type: array
+                  items: { $ref: "#/components/schemas/UploadTarget" }
+    AddFilesResponse:
+      allOf:
+        - $ref: "#/components/schemas/DataEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                ticket: { $ref: "#/components/schemas/Ticket" }
+                uploads:
+                  type: array
+                  items: { $ref: "#/components/schemas/UploadTarget" }
+    FileSettingsUpdate:
+      type: object
+      required: [fileId, settings]
+      properties:
+        fileId: { type: string }
+        settings: { $ref: "#/components/schemas/FileSettings" }
+    UpdateJobRequest:
+      type: object
+      properties:
+        customerName: { type: string }
+        files:
+          type: array
+          items: { $ref: "#/components/schemas/FileSettingsUpdate" }
+        applyToAll: { $ref: "#/components/schemas/FileSettings" }
+
+    Staff:
+      type: object
+      properties:
+        id: { type: string }
+        shopId: { type: string }
+        name: { type: string }
+        role: { type: string, enum: [owner, staff] }
+    StaffMember:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        role: { type: string, enum: [owner, staff] }
+        pending: { type: boolean }
+        pinSetAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+    LoginRequest:
+      type: object
+      required: [shop, name, pin]
+      properties:
+        shop: { type: string }
+        name: { type: string }
+        pin: { type: string }
+    AuthSessionResponse:
+      allOf:
+        - $ref: "#/components/schemas/DataEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                token: { type: string }
+                staff: { $ref: "#/components/schemas/Staff" }
+                expiresAt: { type: string, format: date-time }
+                shop: { $ref: "#/components/schemas/Shop" }
+    StaffNamesResponse:
+      allOf:
+        - $ref: "#/components/schemas/DataEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                shop:
+                  type: object
+                  properties:
+                    slug: { type: string }
+                    name: { type: string }
+                names:
+                  type: array
+                  items: { type: string }
+    SetupInfo:
+      type: object
+      properties:
+        shopName: { type: string }
+        shopSlug: { type: string }
+        staffName: { type: string }
+        role: { type: string }
+        purpose: { type: string, enum: [setup, reset] }
+        expiresAt: { type: string, format: date-time }
+    SetupLink:
+      type: object
+      properties:
+        purpose: { type: string, enum: [setup, reset] }
+        expiresAt: { type: string, format: date-time }
+        setupPath: { type: string, example: /shop/setup#token }
+        setupUrl: { type: string, format: uri }
+    ListStaffResponse:
+      allOf:
+        - $ref: "#/components/schemas/DataEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                staff:
+                  type: array
+                  items: { $ref: "#/components/schemas/StaffMember" }
+    StaffLinkResponse:
+      allOf:
+        - $ref: "#/components/schemas/DataEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                staff: { $ref: "#/components/schemas/StaffMember" }
+                link: { $ref: "#/components/schemas/SetupLink" }
+
+    QueueSnapshot:
+      type: object
+      properties:
+        shop: { $ref: "#/components/schemas/Shop" }
+        jobs:
+          type: array
+          items: { $ref: "#/components/schemas/Job" }
+        copiesToDelete:
+          type: array
+          items: { $ref: "#/components/schemas/Job" }
+        todayCount: { type: integer }
+        wait: { $ref: "#/components/schemas/WaitEstimate" }
+        undoWindowSeconds: { type: integer }
+        serverTime: { type: string, format: date-time }
+    ShopProfile:
+      type: object
+      required: [name, address, opensAt, closesAt]
+      properties:
+        name: { type: string }
+        address: { type: string }
+        opensAt: { type: string, example: "09:00" }
+        closesAt: { type: string, example: "21:30" }
+        holdDays: { type: integer, minimum: 1, maximum: 7 }
+    UpdateShopSettingsRequest:
+      type: object
+      required: [profile, prices]
+      properties:
+        profile: { $ref: "#/components/schemas/ShopProfile" }
+        prices: { $ref: "#/components/schemas/PriceList" }
+    DeletionHealth:
+      type: object
+      properties:
+        dueNow: { type: integer }
+        deleted24h: { type: integer }
+        failed: { type: integer }
+        oldestUndeleted: { type: string, format: date-time }

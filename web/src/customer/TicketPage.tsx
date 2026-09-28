@@ -35,7 +35,7 @@ export default function TicketPage() {
   })
   const [ticket, setTicket] = useState<Ticket | null>(null)
   const [error, setError] = useState('')
-  const [soundOn, setSoundOn] = useState(false)
+  const [soundOn, setSoundOn] = useState(() => localStorage.getItem(`cd:sound:${jobId}`) === 'on')
   const [now, setNow] = useState(Date.now())
   const lastState = useRef<JobState | null>(null)
   const skew = useRef(0)
@@ -226,6 +226,7 @@ export default function TicketPage() {
               type="button"
               onClick={() => {
                 setSoundOn(true)
+                localStorage.setItem(`cd:sound:${jobId}`, 'on')
                 chime('soft')
               }}
               className="flex w-full items-center gap-3 rounded border-[1.5px] border-line bg-surface-tint p-3 text-left text-sm"

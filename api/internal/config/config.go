@@ -50,7 +50,7 @@ type StorageConfig struct {
 }
 
 func (c StorageConfig) S3Enabled() bool {
-	return c.Bucket != "" && c.AccessKey != "" && c.SecretKey != ""
+	return c.Bucket != ""
 }
 
 func Load() Config {
