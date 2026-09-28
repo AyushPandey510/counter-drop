@@ -51,6 +51,9 @@ func migrationsDir() string {
 	return filepath.Join(filepath.Dir(file), "..", "..", "migrations")
 }
 
+// Most tests fire many requests from one address; the rate-limit test turns limits on itself.
+var rateLimitInTests = false
+
 func setup(t *testing.T) *env {
 	t.Helper()
 	dsn := os.Getenv("CD_TEST_DATABASE_URL")
@@ -92,6 +95,7 @@ func setup(t *testing.T) *env {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	cfg := config.Load()
 	cfg.UndoWindow = 10 * time.Minute
+	cfg.RateLimit = rateLimitInTests
 	hub := realtime.NewHub()
 	srv := &httpapi.Server{Store: st, Objects: local, Local: local, Hub: hub, Logger: logger, Cfg: cfg}
 	ts.Config.Handler = srv.Handler()

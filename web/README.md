@@ -23,7 +23,8 @@ Set `VITE_API_PROXY` to proxy to another API address in dev, or `VITE_API_BASE_U
 | `/shop` | Live queue board: lanes, claim, ready, collected, undo, cancel, search, Online/Paused/Offline | MVP |
 | `/shop/qr` | Printable A4 counter poster (EN/HI/MR) | MVP |
 | `/shop/settings` | Owner: name, address, hours, prices, staff (add, PIN links, remove) | MVP |
-| `/scan` | In-app QR scanner | Later (phone camera works today) |
+| `/scan` | In-app QR scanner (camera; accepts only this app's shop codes; type the link name if no camera) | MVP |
+| `/privacy`, `/terms` | Privacy notice (summary in EN/HI/MR) and terms for customers and shops | MVP |
 | `/nearby` | Print nearby: find, prepay by UPI, collect | R1b |
 | `/shop/mode`, `/tv/:slug`, `/admin/*` | Phone shop mode, TV display, admin | R1b / R2 |
 
@@ -37,5 +38,9 @@ src/
 ├── customer/                # Home, DropPage, TicketPage
 └── shop/                    # auth, LoginPage, SetupPage, AccountPage, BoardPage, QrPage, SettingsPage, StaffSection
 ```
+
+Install: Android/desktop Chrome and Edge get an **Install app** button (the browser's own dialog); iPhone Safari gets the "Share → Add to Home Screen" hint. Offered on the home page, the ticket and (small) the drop page; never blocks uploading. Home-screen shortcuts: Scan shop QR, My tickets. The PDF engine and the iPhone QR decoder are downloaded only when needed, so the first visit caches about 0.9 MB.
+
+Build-time settings: `VITE_OPERATOR_NAME` and `VITE_SUPPORT_EMAIL` fill the privacy/terms contact.
 
 Notes: page counts come from pdf.js on the phone (the server falls back to "pages confirmed at counter"). Live updates use Server-Sent Events with polling fallback. Customer screens are in English, Hindi and Marathi; shop screens are English only for now.

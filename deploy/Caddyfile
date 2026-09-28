@@ -1,0 +1,14 @@
+# HTTPS for the single-VM deploy: Caddy gets and renews a Let's Encrypt certificate for CD_DOMAIN
+# automatically and forwards everything to the app. Used by `--profile https` in docker-compose.prod.yml.
+{
+	email {$ACME_EMAIL}
+}
+
+{$CD_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:8080 {
+		# Live updates (Server-Sent Events) must not be buffered.
+		flush_interval -1
+	}
+	header -Server
+}

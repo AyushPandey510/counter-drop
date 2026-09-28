@@ -32,6 +32,11 @@ type Config struct {
 
 	// PublicWebURL is where people open the PWA; used in setup links printed by cdadmin.
 	PublicWebURL string
+
+	// RateLimit turns on per-IP request limits (on by default). TrustProxy makes the API take the
+	// client IP from X-Forwarded-For; set it only behind a proxy that sets that header (ALB, Caddy).
+	RateLimit  bool
+	TrustProxy bool
 }
 
 type StorageConfig struct {
@@ -85,6 +90,8 @@ func Load() Config {
 		SetupLinkTTL:     dur("CD_SETUP_LINK_TTL", 48*time.Hour),
 		DemoSeed:         boolean("CD_DEMO_SEED", env == "dev"),
 		PublicWebURL:     strings.TrimRight(str("CD_PUBLIC_WEB_URL", defaultWebURL()), "/"),
+		RateLimit:        boolean("CD_RATE_LIMIT", true),
+		TrustProxy:       boolean("CD_TRUST_PROXY", false),
 	}
 }
 

@@ -9,6 +9,8 @@ import { uploadFile, mimeOf, ACCEPTED, ALLOWED_MIMES } from '@/lib/upload'
 import { saveTicket, savedTickets } from '@/lib/tickets'
 import type { PublicShop, Ticket, UploadTarget, FileSettings } from '@/lib/types'
 import { Banner, Button, Card, Chip, LangSwitch, Logo, Segmented, Spinner, Stepper } from '@/components/ui'
+import { InstallCard } from '@/components/InstallCard'
+import { LegalLinks } from './LegalPages'
 
 const MAX_FILES = 20
 const MAX_FILE_MB = 25
@@ -525,6 +527,7 @@ export default function DropPage() {
           )}
 
           <div className="lg:hidden">{files.length === 0 && privacy}</div>
+          {files.length === 0 && <InstallCard compact />}
         </div>
 
         {/* Right (desktop) / below (phone): name, price and send */}
@@ -706,6 +709,9 @@ export function Shell({ shop, children, wide = false }: { shop?: PublicShop; chi
         </div>
       </header>
       <main className={`mx-auto w-full flex-1 space-y-3 px-4 py-4 lg:space-y-4 lg:py-8 ${width}`}>{children}</main>
+      <footer className="pb-24 pt-2 lg:pb-6">
+        <LegalLinks />
+      </footer>
     </div>
   )
 }

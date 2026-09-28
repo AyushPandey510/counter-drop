@@ -38,6 +38,10 @@ Fill these first:
 
 ```text
 POSTGRES_PASSWORD=...
+CD_DOMAIN=your-domain.example        # for the bundled HTTPS (Caddy)
+ACME_EMAIL=you@your-domain.example
+VITE_OPERATOR_NAME=Your Company Name # shown on /privacy and /terms
+VITE_SUPPORT_EMAIL=support@your-domain.example
 CD_PUBLIC_API_URL=https://your-domain.example
 CD_PUBLIC_WEB_URL=https://your-domain.example
 CD_WEB_ORIGINS=https://your-domain.example
@@ -67,14 +71,15 @@ If using local disk for a one-VM pilot, keep `/data/files` on a persistent volum
 
 ## VM Docker Compose Deploy
 
-From the server:
+From the server (Ubuntu with Docker; DNS A record for `CD_DOMAIN` pointing at it; ports 80 and 443 open):
 
 ```bash
 git pull
-make build-image
 cd deploy
-docker compose --env-file prod.env -f docker-compose.prod.yml up -d --build
+docker compose --env-file prod.env -f docker-compose.prod.yml --profile https up -d --build
 ```
+
+`--profile https` starts Caddy, which obtains and renews a Let's Encrypt certificate for `CD_DOMAIN` automatically and forwards to the app. The app itself listens only on `127.0.0.1:8080`. Keep `CD_TRUST_PROXY=true` so rate limits see real client IPs.
 
 Check health:
 
@@ -83,7 +88,18 @@ curl -fsS https://your-domain.example/health
 curl -fsS https://your-domain.example/ready
 ```
 
-Put Caddy, Nginx, Cloudflare Tunnel, Render, Fly, or another HTTPS layer in front of port `8080`. The browser-facing origin must match `CD_PUBLIC_API_URL` and `CD_PUBLIC_WEB_URL`.
+Using your own HTTPS layer instead (Nginx, Cloudflare Tunnel, an ALB)? Leave out `--profile https` and point it at `127.0.0.1:8080`. The browser-facing origin must match `CD_PUBLIC_API_URL` and `CD_PUBLIC_WEB_URL`.
+
+**Quick HTTPS for phone testing without a server:** `cloudflared tunnel --url http://localhost:18080` prints a temporary `https://….trycloudflare.com` address; set `CD_PUBLIC_API_URL`/`CD_PUBLIC_WEB_URL` to it and restart the API. Camera scanning and app install need HTTPS.
+
+**Backups:** the database is the only thing to back up (files are deleted by design). On a VM, a daily dump:
+
+```bash
+docker compose --env-file prod.env -f docker-compose.prod.yml exec -T postgres \
+  pg_dump -U counter_drop -Fc counter_drop > backups/counter_drop-$(date +%F).dump
+```
+
+Keep 14 days and copy them off the server.
 
 ## Create First Real Shop
 
@@ -119,7 +135,11 @@ Send the printed setup link to the owner. The owner chooses their own PIN. Avoid
 ## Go/No-Go Checklist
 
 - API `/health` and `/ready` return 200 over HTTPS.
-- PWA installs or opens standalone on Android Chrome.
+- PWA installs or opens standalone on Android Chrome; iPhone shows the "Add to Home Screen" hint.
+- In-app **Scan shop QR** opens the camera and accepts only your shop codes.
+- `/privacy` and `/terms` show your company name and support email (have them reviewed by a lawyer before a public launch).
+- Security headers present: `curl -sI https://your-domain.example/ | grep -i -E "content-security|strict-transport|x-frame"`.
+- Rate limits work behind the proxy: 11 quick wrong logins give HTTP 429.
 - iPhone Safari can scan QR, upload, submit, and view ticket.
 - Upload URLs use the public HTTPS API origin, not `localhost`.
 - Queue live updates arrive without manual refresh.

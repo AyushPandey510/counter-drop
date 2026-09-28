@@ -1,15 +1,18 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { QrCode, Ticket as TicketIcon, Trash2 } from 'lucide-react'
+import { QrCode, ScanLine, Ticket as TicketIcon, Trash2 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { forgetTicket, savedTickets } from '@/lib/tickets'
-import { Card } from '@/components/ui'
+import { Button, Card } from '@/components/ui'
+import { InstallCard } from '@/components/InstallCard'
+import { useNavigate } from 'react-router-dom'
 import { Shell } from './DropPage'
 
 // Landing page for people who open the app without scanning a shop QR (installed PWA, shared link).
 export default function Home() {
   const { t } = useI18n()
   const [tickets, setTickets] = useState(savedTickets)
+  const navigate = useNavigate()
 
   return (
     <Shell wide>
@@ -22,6 +25,9 @@ export default function Home() {
           <p className="hidden text-ink-muted lg:block">{t('privacy')}</p>
         </div>
         <div className="space-y-3">
+          <Button size="lg" className="w-full" onClick={() => navigate('/scan')}>
+            <ScanLine className="h-6 w-6" aria-hidden /> {t('scanBtn')}
+          </Button>
           {tickets.length > 0 && (
             <Card className="divide-y divide-line">
               {tickets.map((tk) => (
@@ -52,6 +58,7 @@ export default function Home() {
             <p className="text-sm">{t('scanHint')}</p>
           </Card>
           <p className="text-sm text-ink-muted lg:hidden">{t('privacy')}</p>
+          <InstallCard />
 
           <div className="pt-6 text-center lg:pt-2 lg:text-left">
             <Link to="/shop/login" className="text-sm font-semibold text-action underline">

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { api, ApiError, store } from '@/lib/api'
 import type { Shop, Staff } from '@/lib/types'
@@ -51,6 +51,27 @@ export function ShopAuthProvider({ children }: { children: ReactNode }) {
     setSession(null)
   }, [session])
 
+  // `call` and `setShop` keep the same identity for the whole session. Screens use them as effect
+  // dependencies, so if they changed on every shop update a screen would re-fetch in an endless loop.
+  const tokenRef = useRef(session?.token)
+  tokenRef.current = session?.token
+
+  const call = useCallback(async <T,>(path: string, opts: { method?: string; body?: unknown } = {}) => {
+    try {
+      return await api<T>(path, { ...opts, token: tokenRef.current })
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        store.remove(KEY)
+        setSession(null)
+      }
+      throw e
+    }
+  }, [])
+
+  const setShop = useCallback((shop: Shop) => {
+    setSession((s) => (s && JSON.stringify(s.shop) !== JSON.stringify(shop) ? { ...s, shop } : s))
+  }, [])
+
   const value = useMemo<Ctx>(
     () => ({
       session,
@@ -61,20 +82,10 @@ export function ShopAuthProvider({ children }: { children: ReactNode }) {
       },
       adopt,
       logout,
-      call: async <T,>(path: string, opts: { method?: string; body?: unknown } = {}) => {
-        try {
-          return await api<T>(path, { ...opts, token: session?.token })
-        } catch (e) {
-          if (e instanceof ApiError && e.status === 401) {
-            store.remove(KEY)
-            setSession(null)
-          }
-          throw e
-        }
-      },
-      setShop: (shop) => setSession((s) => (s ? { ...s, shop } : s)),
+      call,
+      setShop,
     }),
-    [session, loading, logout, adopt],
+    [session, loading, logout, adopt, call, setShop],
   )
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>
 }

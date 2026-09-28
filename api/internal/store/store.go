@@ -80,23 +80,36 @@ func (s *Store) ApplyMigrations(ctx context.Context, dir string) error {
 		}
 	}
 	sort.Strings(files)
-	if _, err := s.pool.Exec(ctx, `CREATE TABLE IF NOT EXISTS cd_schema_migrations (
-		version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`); err != nil {
+	// CREATE TABLE IF NOT EXISTS is not safe when two containers run it at the same moment,
+	// so it runs under the same advisory lock as the migrations.
+	if err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('cd_schema_migrations'))`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `CREATE TABLE IF NOT EXISTS cd_schema_migrations (
+			version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`)
+		return err
+	}); err != nil {
 		return fmt.Errorf("create schema migrations table: %w", err)
 	}
 	for _, file := range files {
-		var applied bool
-		if err := s.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM cd_schema_migrations WHERE version = $1)`, file).Scan(&applied); err != nil {
-			return err
-		}
-		if applied {
-			continue
-		}
 		body, err := os.ReadFile(filepath.Join(dir, file))
 		if err != nil {
 			return err
 		}
+		// Several containers can start at once (rolling deploys): a transaction-scoped advisory lock
+		// makes them take turns, and each re-checks inside the lock whether the file is already applied.
 		err = pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+			if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('cd_schema_migrations'))`); err != nil {
+				return err
+			}
+			var applied bool
+			if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM cd_schema_migrations WHERE version = $1)`, file).Scan(&applied); err != nil {
+				return err
+			}
+			if applied {
+				return nil
+			}
 			if _, err := tx.Exec(ctx, string(body)); err != nil {
 				return err
 			}

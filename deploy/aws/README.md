@@ -55,6 +55,22 @@ aws s3api put-bucket-cors \
 
 The app uses browser direct uploads to signed S3 URLs, so CORS must allow `PUT`, `GET`, and `HEAD` from the PWA origin.
 
+### Bucket safety (do this once)
+
+The deletion promise depends on these:
+
+```bash
+# No public access, ever.
+aws s3api put-public-access-block --bucket counter-drop-prod-files \
+  --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+
+# Backstop: anything left under cd/ is removed after 8 days even if the app's deletion worker stopped.
+aws s3api put-bucket-lifecycle-configuration --bucket counter-drop-prod-files \
+  --lifecycle-configuration file://deploy/aws/s3-lifecycle.json
+```
+
+**Leave versioning off** (the default) and don't add replication: with versioning on, a "deleted" file survives as an old version.
+
 ## 4. Push Image To ECR
 
 ```bash
@@ -65,7 +81,9 @@ IMAGE_TAG=$(git rev-parse --short HEAD)
 aws ecr get-login-password --region "$AWS_REGION" \
   | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
-docker build -t counter-drop:$IMAGE_TAG -f Dockerfile .
+docker build -t counter-drop:$IMAGE_TAG -f Dockerfile \
+  --build-arg VITE_OPERATOR_NAME="Your Company Name" \
+  --build-arg VITE_SUPPORT_EMAIL="support@your-domain.example" .
 docker tag counter-drop:$IMAGE_TAG "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/counter-drop:$IMAGE_TAG"
 docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/counter-drop:$IMAGE_TAG"
 ```
@@ -97,6 +115,10 @@ aws ecs update-service \
   --task-definition counter-drop-prod
 ```
 
+### Run exactly one task
+
+Set the ECS service's **desired count to 1**. Live updates and rate limits are kept in the container's memory, so a second task would miss events and double the limits. One Fargate task (0.5 vCPU / 1 GB) handles a pilot comfortably. Migrations are safe if two tasks overlap during a deploy (they take turns under a database lock).
+
 ## 6. Required Runtime Env
 
 Set these in the task definition:
@@ -109,7 +131,11 @@ CD_WEB_ORIGINS=https://app.your-domain.example
 CD_STORAGE_REGION=ap-south-1
 CD_STORAGE_BUCKET=counter-drop-prod-files
 CD_DEMO_SEED=false
+CD_TRUST_PROXY=true   # the ALB sets X-Forwarded-For; rate limits need the real client IP
+CD_RATE_LIMIT=true
 ```
+
+The privacy/terms contact is baked in at image build time (`VITE_OPERATOR_NAME`, `VITE_SUPPORT_EMAIL`; for the GitHub workflow set them as repository variables).
 
 Set this as a secret from SSM/Secrets Manager:
 
@@ -153,5 +179,7 @@ Send the printed setup link to the owner.
 - Upload URLs point to S3, not localhost.
 - S3 CORS allows phone uploads from the PWA domain.
 - RDS has automated backups enabled.
-- S3 bucket has lifecycle/retention policy appropriate for your deletion promise.
+- S3 bucket: public access blocked, versioning off, `s3-lifecycle.json` applied.
+- ECS service desired count is 1.
+- `/privacy` shows your company name and support email.
 - Phone QR test works on Android Chrome and iPhone Safari.

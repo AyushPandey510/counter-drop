@@ -1,0 +1,11 @@
+{
+  "Rules": [
+    {
+      "ID": "counter-drop-deletion-backstop",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "cd/" },
+      "Expiration": { "Days": 8 },
+      "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 1 }
+    }
+  ]
+}

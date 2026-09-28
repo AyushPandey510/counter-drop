@@ -85,6 +85,12 @@ Shop — `Authorization: Bearer <session>`:
 | GET | `/shop/deletion-health` | Owner: deletion backlog and failures |
 | GET | `/shop/events?token=` | SSE stream |
 
+## Protection
+
+- **Rate limits** per client IP (`CD_RATE_LIMIT`, on by default): sign-in 10/min, setup links 20/min, staff names 30/min, new jobs 10/min, uploads 60/min, live-update connections 30/min, other customer actions 120/min, everything else 600/min. Over the limit: HTTP 429 with `Retry-After`. Behind a proxy set `CD_TRUST_PROXY=true` so the real client IP (last `X-Forwarded-For` entry) is used; without it a forged header is ignored. Limits live in memory, so run one API instance.
+- **Security headers** on every response: Content-Security-Policy (own scripts only, no inline scripts, no framing; uploads allowed to the storage origin), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` (camera only for the in-app scanner), and HSTS when `CD_ENV=prod`. Customer files are served without a CSP so the browser's PDF viewer works.
+- **Migrations** run under a Postgres advisory lock, so containers starting together (rolling deploys) take turns.
+
 ## Tests
 
 ```bash

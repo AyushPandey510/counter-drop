@@ -94,7 +94,9 @@ export function StaffSection() {
                     {me && <Chip tone="dark">You</Chip>}
                     {m.pending && <Chip tone="attention">Waiting for setup</Chip>}
                   </div>
-                  {!m.pending && m.pinSetAt && <div className="text-xs text-ink-muted">PIN set {new Date(m.pinSetAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })}</div>}
+                  {!m.pending && m.pinSetAt && (
+                    <div className="text-xs text-ink-muted">PIN set {new Date(m.pinSetAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })}</div>
+                  )}
                 </div>
                 {!me && (
                   <div className="flex gap-2">
@@ -115,7 +117,13 @@ export function StaffSection() {
       <form onSubmit={add} className="space-y-2 rounded border-[1.5px] border-dashed border-line p-3">
         <label className="block text-sm font-semibold">
           Add a person
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="First name, e.g. Sana" maxLength={30} className="mt-1 h-11 w-full rounded border-[1.5px] border-line bg-surface px-3" />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="First name, e.g. Sana"
+            maxLength={30}
+            className="mt-1 h-11 w-full rounded border-[1.5px] border-line bg-surface px-3"
+          />
         </label>
         <Segmented
           label="Role"
@@ -162,7 +170,8 @@ function LinkCard({ shown, shopName, onClose }: { shown: Shown; shopName: string
         <div>
           <div className="font-bold">Send this link to {shown.person} only</div>
           <div className="text-xs text-ink-muted">
-            Works once · expires {clock(shown.link.expiresAt)}, {new Date(shown.link.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })}. Until it's used, anyone with it can set {shown.person}'s PIN.
+            Works once · expires {clock(shown.link.expiresAt)}, {new Date(shown.link.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })}. Until it's
+            used, anyone with it can set {shown.person}'s PIN.
           </div>
         </div>
         <button type="button" onClick={onClose} className="rounded p-1 hover:bg-surface" aria-label="Close">

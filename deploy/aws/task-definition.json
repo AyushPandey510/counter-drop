@@ -23,6 +23,8 @@
         { "name": "CD_API_ADDR", "value": ":8080" },
         { "name": "CD_LOG_LEVEL", "value": "info" },
         { "name": "CD_DEMO_SEED", "value": "false" },
+        { "name": "CD_TRUST_PROXY", "value": "true" },
+        { "name": "CD_RATE_LIMIT", "value": "true" },
         { "name": "CD_PUBLIC_API_URL", "value": "https://app.your-domain.example" },
         { "name": "CD_PUBLIC_WEB_URL", "value": "https://app.your-domain.example" },
         { "name": "CD_WEB_ORIGINS", "value": "https://app.your-domain.example" },

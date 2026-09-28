@@ -5,6 +5,11 @@ WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
+# Shown on the privacy and terms pages; baked into the web build.
+ARG VITE_OPERATOR_NAME=""
+ARG VITE_SUPPORT_EMAIL=""
+ENV VITE_OPERATOR_NAME=$VITE_OPERATOR_NAME \
+    VITE_SUPPORT_EMAIL=$VITE_SUPPORT_EMAIL
 RUN npm run build
 
 FROM golang:1.27.1-alpine AS api-build

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { BellRing, Check, Download, Lock, ShieldCheck, Share2, Trash2 } from 'lucide-react'
-import { api, ApiError } from '@/lib/api'
+import { api, ApiError, store } from '@/lib/api'
 import { useI18n, type Key } from '@/lib/i18n'
 import { clock, dayTime, mmss, rupees } from '@/lib/format'
 import { chime, useLive } from '@/lib/live'
@@ -9,6 +9,7 @@ import { findTicket, saveTicket } from '@/lib/tickets'
 import type { Job, JobState, Ticket } from '@/lib/types'
 import { Banner, Button, Card, Spinner, stateMeta } from '@/components/ui'
 import { Shell } from './DropPage'
+import { InstallCard } from '@/components/InstallCard'
 
 const steps: { state: JobState; key: Key }[] = [
   { state: 'queued', key: 'inLine' },
@@ -35,7 +36,7 @@ export default function TicketPage() {
   })
   const [ticket, setTicket] = useState<Ticket | null>(null)
   const [error, setError] = useState('')
-  const [soundOn, setSoundOn] = useState(() => localStorage.getItem(`cd:sound:${jobId}`) === 'on')
+  const [soundOn, setSoundOn] = useState(() => store.get(`cd:sound:${jobId}`) === 'on')
   const [now, setNow] = useState(Date.now())
   const lastState = useRef<JobState | null>(null)
   const skew = useRef(0)
@@ -226,7 +227,7 @@ export default function TicketPage() {
               type="button"
               onClick={() => {
                 setSoundOn(true)
-                localStorage.setItem(`cd:sound:${jobId}`, 'on')
+                store.set(`cd:sound:${jobId}`, 'on')
                 chime('soft')
               }}
               className="flex w-full items-center gap-3 rounded border-[1.5px] border-line bg-surface-tint p-3 text-left text-sm"
@@ -329,6 +330,7 @@ export default function TicketPage() {
             </Card>
           )}
 
+          <InstallCard />
           {isDone && (
             <Link to={`/s/${shop.slug}`} className="block text-center font-semibold text-action underline">
               {t('newJob')}

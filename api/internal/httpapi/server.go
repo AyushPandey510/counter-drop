@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"counter-drop/api/internal/config"
+	"counter-drop/api/internal/ratelimit"
 	"counter-drop/api/internal/realtime"
 	"counter-drop/api/internal/storage"
 	"counter-drop/api/internal/store"
@@ -22,6 +23,8 @@ type Server struct {
 	Hub     *realtime.Hub
 	Logger  *slog.Logger
 	Cfg     config.Config
+
+	limiter *ratelimit.Limiter
 }
 
 func (s *Server) limits() store.Limits {
@@ -90,7 +93,8 @@ func (s *Server) Handler() http.Handler {
 	if s.Cfg.WebDir != "" {
 		h = spaFallback(s.Cfg.WebDir, mux)
 	}
-	return chain(h, s.Logger, s.Cfg.WebOrigins)
+	// Order: recover → request ID → log → security headers → rate limit → CORS → routes.
+	return chain(s.securityHeaders(s.rateLimit(h)), s.Logger, s.Cfg.WebOrigins)
 }
 
 // spaFallback serves the built PWA for non-API paths, with index.html for client-side routes.

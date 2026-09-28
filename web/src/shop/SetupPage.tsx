@@ -144,7 +144,11 @@ export default function SetupPage() {
           <PinPad value={pin} onDigit={press} onDelete={del} busy={busy} label={step === 'choose' ? 'New PIN' : 'Confirm PIN'} />
           <p className="mt-4 flex items-start gap-2 text-xs text-ink-muted">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-ready" aria-hidden />
-            Only you will know this PIN — not the shop owner, not Counter Drop. If you forget it, ask for a new link.
+            Only you will know this PIN — not the shop owner, not Counter Drop. If you forget it, ask for a new link. By setting a PIN you agree to the{' '}
+            <Link to="/terms" className="underline">
+              shop terms
+            </Link>
+            .
           </p>
         </Card>
       )}

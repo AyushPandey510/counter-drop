@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Clock3, MonitorSmartphone, ShieldCheck } from 'lucide-react'
 import { Logo } from '@/components/ui'
+import { LegalLinks } from '@/customer/LegalPages'
 
 // Sign-in and setup screens. Phones: a single centred column. Wide screens: a brand panel on the left.
 export function AuthLayout({ subtitle, children }: { subtitle: string; children: ReactNode }) {
@@ -44,6 +45,7 @@ export function AuthLayout({ subtitle, children }: { subtitle: string; children:
         </div>
         <h1 className="hidden text-3xl font-bold lg:block">{subtitle}</h1>
         {children}
+        <LegalLinks className="pt-4" />
       </main>
     </div>
   )
