@@ -9,6 +9,20 @@ jobs:
   api:
     name: Go API
     runs-on: ubuntu-latest
+    # The end-to-end tests need Postgres; without it they are skipped.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: counter_drop_test
+          POSTGRES_USER: counter_drop
+          POSTGRES_PASSWORD: counter_drop
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U counter_drop"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      CD_TEST_DATABASE_URL: postgres://counter_drop:counter_drop@localhost:5432/counter_drop_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

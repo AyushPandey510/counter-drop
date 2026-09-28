@@ -32,6 +32,8 @@ jobs:
           IMAGE_TAG: ${{ inputs.image_tag || github.sha }}
         run: |
           IMAGE_URI="${{ steps.ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}"
-          docker build -t "$IMAGE_URI" -f Dockerfile .
+          docker build -t "$IMAGE_URI" -f Dockerfile \
+            --build-arg VITE_OPERATOR_NAME="${{ vars.VITE_OPERATOR_NAME }}" \
+            --build-arg VITE_SUPPORT_EMAIL="${{ vars.VITE_SUPPORT_EMAIL }}" .
           docker push "$IMAGE_URI"
           echo "Pushed $IMAGE_URI"

@@ -7,6 +7,8 @@ AWS_REGION ?= ap-south-1
 AWS_ACCOUNT_ID ?=
 ECR_REPOSITORY ?= counter-drop
 IMAGE_TAG ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo local)
+# Privacy/terms contact baked into the web build: make build-image VITE_OPERATOR_NAME="..." VITE_SUPPORT_EMAIL=...
+BUILD_ARGS = --build-arg VITE_OPERATOR_NAME="$(VITE_OPERATOR_NAME)" --build-arg VITE_SUPPORT_EMAIL="$(VITE_SUPPORT_EMAIL)"
 
 .PHONY: help dev-db api-dev web-dev test test-api test-web build build-web build-image aws-image aws-push launch-check clean
 
@@ -49,11 +51,11 @@ build-web:
 	cd $(WEB_DIR) && npm run build
 
 build-image:
-	docker build -t $(IMAGE) -f Dockerfile .
+	docker build $(BUILD_ARGS) -t $(IMAGE) -f Dockerfile .
 
 aws-image:
 	@test -n "$(AWS_ACCOUNT_ID)" || (echo "Set AWS_ACCOUNT_ID=..." && exit 1)
-	docker build -t $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_REPOSITORY):$(IMAGE_TAG) -f Dockerfile .
+	docker build $(BUILD_ARGS) -t $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_REPOSITORY):$(IMAGE_TAG) -f Dockerfile .
 
 aws-push: aws-image
 	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
