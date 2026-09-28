@@ -40,9 +40,10 @@ services:
   caddy:
     profiles: ["https"]
     image: caddy:2-alpine
+    restart: unless-stopped
     environment:
-      CD_DOMAIN: ${CD_DOMAIN}
-      ACME_EMAIL: ${ACME_EMAIL}
+      CD_DOMAIN: ${CD_DOMAIN:-${DOMAIN:-localhost}}
+      ACME_EMAIL: ${ACME_EMAIL:-}
     ports:
       - "80:80"
       - "443:443"
@@ -53,7 +54,6 @@ services:
       - caddy_config:/config
     depends_on:
       - app
-    restart: unless-stopped
 
 volumes:
   counter_drop_pg:

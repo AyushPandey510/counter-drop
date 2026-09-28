@@ -4,7 +4,7 @@
 	email {$ACME_EMAIL}
 }
 
-{$CD_DOMAIN} {
+{$CD_DOMAIN:{$DOMAIN:localhost}} {
 	encode zstd gzip
 	reverse_proxy app:8080 {
 		# Live updates (Server-Sent Events) must not be buffered.
