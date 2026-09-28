@@ -78,3 +78,6 @@ desktop.ini
 
 # Claude / agent scratch (keep CLAUDE.md if you add one)
 .claude/settings.local.json
+
+# Files saved by the Claude app
+Claude outputs/
