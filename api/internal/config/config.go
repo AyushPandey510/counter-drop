@@ -27,7 +27,11 @@ type Config struct {
 	MaxJobBytes      int64
 	MaxFiles         int
 	SessionTTL       time.Duration
+	SetupLinkTTL     time.Duration
 	DemoSeed         bool
+
+	// PublicWebURL is where people open the PWA; used in setup links printed by cdadmin.
+	PublicWebURL string
 }
 
 type StorageConfig struct {
@@ -78,8 +82,24 @@ func Load() Config {
 		MaxJobBytes:      int64(num("CD_MAX_JOB_MB", 50)) << 20,
 		MaxFiles:         num("CD_MAX_FILES", 20),
 		SessionTTL:       dur("CD_SESSION_TTL", 12*time.Hour),
+		SetupLinkTTL:     dur("CD_SETUP_LINK_TTL", 48*time.Hour),
 		DemoSeed:         boolean("CD_DEMO_SEED", env == "dev"),
+		PublicWebURL:     strings.TrimRight(str("CD_PUBLIC_WEB_URL", defaultWebURL()), "/"),
 	}
+}
+
+// defaultWebURL: the API itself when it serves the PWA, otherwise the Vite dev server.
+func defaultWebURL() string {
+	if str("CD_WEB_DIR", "") != "" {
+		return str("CD_PUBLIC_API_URL", "http://localhost:8080")
+	}
+	return strings.Split(str("CD_WEB_ORIGINS", "http://localhost:5173"), ",")[0]
+}
+
+// SetupURL is the full link a person opens to choose their PIN. The token is in the fragment,
+// so it never reaches server logs or Referer headers.
+func (c Config) SetupURL(token string) string {
+	return c.PublicWebURL + "/shop/setup#" + token
 }
 
 func str(key, fallback string) string {

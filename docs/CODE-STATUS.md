@@ -14,7 +14,7 @@ Snapshot: 28 Sep 2026, after the MVP build. Verified by `go vet`, `go test ./...
 | 04 API foundation | Done | recover, request ID, path-only logging, CORS, `{data}` / `{error}` envelope, strict JSON decode, context everywhere |
 | 05 Schema v2 | Done (MVP) | `0004_mvp_walkin.sql`: lanes, staff, sessions, daily token counters, job events, file settings and deletion retries; upgrades old rows |
 | 06 State machine | Done (MVP) | uploading → queued → claimed → ready → collected, cancelled; release, undo, abandon; effects; full matrix test |
-| 07 Auth | Partial | Staff PIN (pbkdf2, lockout), hashed sessions, shop scope, owner role. **No phone OTP / signup** (use `cdadmin`) |
+| 07 Auth | Partial | Staff PIN (pbkdf2, lockout), hashed sessions, shop scope, owner role; **one-time setup links** (people choose their own PIN), change PIN, owner staff management, weak-PIN rule. **No phone OTP / self-signup yet** (shops created with `cdadmin`) |
 | 08 Pricing | Done | Paise, per side / per sheet, colour, copies, page ranges, minimum charge, rupee rounding, price version |
 | 09 Tokens & wait | Done | Daily tokens per lane (A B/W, B colour), IST business day, wait range and ready-by |
 | 10 Walk-in job API | Done | Create, add/remove files, upload confirm with size/type check, page count, quote, submit, ticket, cancel |
@@ -35,11 +35,12 @@ Snapshot: 28 Sep 2026, after the MVP build. Verified by `go vet`, `go test ./...
 | Postgres required; in-memory store removed | One code path to test |
 | Business day = local midnight (IST) | Tokens restart at A-01 each day |
 | PIN-only staff sign-in, shops created with `cdadmin` | OTP and self-signup are the next auth step |
+| One-time setup links instead of handing out PINs | Whoever creates an account never knows its PIN; works without SMS; becomes the "invite staff" step of the OTP signup later |
 | Audio/voice features deferred | As agreed |
 
 ## Next
 
 1. Deploy a pilot: one small VM (API + built web via `CD_WEB_DIR`) + managed Postgres, HTTPS, `CD_STORAGE_SIGNING_KEY` set; or R2.
-2. Phone OTP for owners and shop self-signup (step 07) + admin console (step 23).
+2. Phone OTP for owners and shop self-signup (step 07 — setup links, change PIN and staff management are done) + admin console (step 23).
 3. Refresh `contracts/openapi.yaml`; add Makefile and CI (step 01).
 4. R1b: Print nearby and UPI prepay.

@@ -13,6 +13,8 @@ type Ctx = {
   session: Session | null
   loading: boolean
   login: (shop: string, name: string, pin: string) => Promise<void>
+  /** Start a session from a response shaped like /shop/login (used by the setup link page). */
+  adopt: (res: { token: string; staff: Staff; shop: Shop }) => void
   logout: () => Promise<void>
   call: <T>(path: string, opts?: { method?: string; body?: unknown }) => Promise<T>
   setShop: (s: Shop) => void
@@ -37,6 +39,12 @@ export function ShopAuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false))
   }, [])
 
+  const adopt = useCallback((res: { token: string; staff: Staff; shop: Shop }) => {
+    store.set(KEY, res.token)
+    store.set('cd.shop.slug', res.shop.slug)
+    setSession({ token: res.token, staff: res.staff, shop: res.shop })
+  }, [])
+
   const logout = useCallback(async () => {
     if (session) await api('/shop/logout', { body: {}, token: session.token }).catch(() => {})
     store.remove(KEY)
@@ -49,10 +57,9 @@ export function ShopAuthProvider({ children }: { children: ReactNode }) {
       loading,
       login: async (shop, name, pin) => {
         const res = await api<{ token: string; staff: Staff; shop: Shop }>('/shop/login', { body: { shop, name, pin } })
-        store.set(KEY, res.token)
-        store.set('cd.shop.slug', res.shop.slug)
-        setSession(res)
+        adopt(res)
       },
+      adopt,
       logout,
       call: async <T,>(path: string, opts: { method?: string; body?: unknown } = {}) => {
         try {
@@ -67,7 +74,7 @@ export function ShopAuthProvider({ children }: { children: ReactNode }) {
       },
       setShop: (shop) => setSession((s) => (s ? { ...s, shop } : s)),
     }),
-    [session, loading, logout],
+    [session, loading, logout, adopt],
   )
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>
 }

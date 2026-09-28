@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { Delete } from 'lucide-react'
 import { api, ApiError, store } from '@/lib/api'
-import { Banner, Button, Card, Logo, Spinner } from '@/components/ui'
+import { Banner, Button, Card, Logo } from '@/components/ui'
+import { PinPad } from '@/components/PinPad'
 import { useShopAuth, useShopTheme } from './auth'
 
 // Staff sign-in: shop link name → name tile → 4-digit PIN (FSD SCR-S02, R1a without phone OTP).
@@ -35,22 +35,26 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const press = async (digit: string) => {
-    if (busy) return
-    const next = (pin + digit).slice(0, 4)
-    setPin(next)
-    if (next.length === 4 && shop) {
-      setBusy(true)
-      try {
-        await login(shop.slug, name, next)
-      } catch (e) {
-        setError(e instanceof ApiError ? e.message : 'Could not sign in')
-        setPin('')
-      } finally {
-        setBusy(false)
+  const press = useCallback(
+    async (digit: string) => {
+      if (busy || !shop || !name) return
+      const next = (pin + digit).slice(0, 4)
+      setPin(next)
+      if (next.length === 4) {
+        setBusy(true)
+        try {
+          await login(shop.slug, name, next)
+        } catch (e) {
+          setError(e instanceof ApiError ? e.message : 'Could not sign in')
+          setPin('')
+        } finally {
+          setBusy(false)
+        }
       }
-    }
-  }
+    },
+    [busy, shop, name, pin, login],
+  )
+  const del = useCallback(() => setPin((p) => p.slice(0, -1)), [])
 
   if (session) return <Navigate to="/shop" replace />
 
@@ -78,6 +82,7 @@ export default function LoginPage() {
             </label>
             <input id="slug" value={slug} onChange={(e) => setSlug(e.target.value)} autoCapitalize="none" autoCorrect="off" placeholder="imran-xerox" className="mt-2 h-12 w-full rounded border-[1.5px] border-line bg-surface px-3 font-mono" />
             <p className="mt-1 text-xs text-ink-muted">The name in your shop's QR link: …/s/<b>your-shop</b></p>
+            <p className="mt-2 text-xs text-ink-muted">First time? Open the one-time setup link you were sent to choose your PIN.</p>
             <Button className="mt-3 w-full" type="submit" disabled={!slug.trim()}>
               Continue
             </Button>
@@ -92,6 +97,7 @@ export default function LoginPage() {
             </button>
           </div>
           <p className="mb-2 text-sm text-ink-muted">Who's at the counter?</p>
+          {names.length === 0 && <p className="text-sm">Nobody has set a PIN yet. Open the setup link you were sent.</p>}
           <div className="grid grid-cols-2 gap-2">
             {names.map((n) => (
               <Button key={n} variant="secondary" size="lg" onClick={() => setName(n)}>
@@ -115,31 +121,8 @@ export default function LoginPage() {
             </button>
           </div>
           <p className="text-sm text-ink-muted">Enter your 4-digit PIN</p>
-          <div className="my-4 flex justify-center gap-3" aria-live="polite" aria-label={`${pin.length} of 4 digits entered`}>
-            {[0, 1, 2, 3].map((i) => (
-              <span key={i} className={`h-4 w-4 rounded-full ${i < pin.length ? 'bg-ink' : 'border-2 border-line'}`} />
-            ))}
-          </div>
-          {busy ? (
-            <div className="flex justify-center py-8">
-              <Spinner className="h-8 w-8" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => (
-                <Button key={d} variant="secondary" size="lg" className="font-mono text-2xl" onClick={() => press(d)}>
-                  {d}
-                </Button>
-              ))}
-              <span />
-              <Button variant="secondary" size="lg" className="font-mono text-2xl" onClick={() => press('0')}>
-                0
-              </Button>
-              <Button variant="ghost" size="lg" aria-label="Delete digit" onClick={() => setPin((p) => p.slice(0, -1))}>
-                <Delete className="h-6 w-6" aria-hidden />
-              </Button>
-            </div>
-          )}
+          <PinPad value={pin} onDigit={press} onDelete={del} busy={busy} />
+          <p className="mt-3 text-center text-xs text-ink-muted">Forgot your PIN? Ask the shop owner for a new PIN link.</p>
         </Card>
       )}
     </div>

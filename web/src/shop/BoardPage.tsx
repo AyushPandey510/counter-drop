@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, ExternalLink, LogOut, Moon, Play, Printer, QrCode, RotateCcw, Search, Settings, Sun, Undo2, Volume2, VolumeX, X, Zap } from 'lucide-react'
+import { Check, ExternalLink, LogOut, Moon, Play, Printer, QrCode, RotateCcw, Search, Settings, Sun, Undo2, UserRound, Volume2, VolumeX, X, Zap } from 'lucide-react'
 import { ApiError } from '@/lib/api'
 import { chime, useLive } from '@/lib/live'
 import { clock, minutesSince, mmss, rupees } from '@/lib/format'
@@ -224,6 +224,9 @@ export default function BoardPage() {
                 <Settings className="h-5 w-5" />
               </Link>
             )}
+            <Link to="/shop/account" className="rounded p-2 hover:bg-surface-tint" aria-label="My account and PIN" title="My account and PIN">
+              <UserRound className="h-5 w-5" />
+            </Link>
             <IconBtn label="Sign out" onClick={logout}>
               <LogOut className="h-5 w-5" />
             </IconBtn>

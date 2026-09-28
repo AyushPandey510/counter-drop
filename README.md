@@ -55,6 +55,8 @@ npm run dev -- --host
 - Shop: http://localhost:5173/shop/login → shop `demo-print` → **Kavita** PIN `1111`, or **Owner** PIN `1234` for settings.
 - One-process mode: `cd web && npm run build`, then start the API with `CD_WEB_DIR=../web/dist` and open http://localhost:8080.
 
+To onboard a real shop: `cd api && go run ./cmd/cdadmin create-shop -slug imran-xerox -name "Imran Xerox" -owner Imran` prints a one-time link; send it to the owner, who opens it and chooses their own PIN. See [`api/README.md`](api/README.md#onboarding-shops-cdadmin).
+
 Files are stored on local disk by default (`api/.data/files`); set the `CD_STORAGE_*` R2 values to use Cloudflare R2. All settings: [`deploy/.env.example`](deploy/.env.example). API reference: [`api/README.md`](api/README.md).
 
 ## Tests

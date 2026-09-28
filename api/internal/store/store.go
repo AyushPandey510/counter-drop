@@ -34,6 +34,12 @@ var (
 	ErrLocked            = errors.New("too many attempts, try again later")
 	ErrUnauthorized      = errors.New("unauthorized")
 	ErrNotEditable       = errors.New("job can no longer be changed")
+	ErrSetupPending      = errors.New("PIN not set up yet")
+	ErrLinkInvalid       = errors.New("setup link expired or already used")
+	ErrWeakPIN           = errors.New("PIN too easy to guess")
+	ErrSamePIN           = errors.New("new PIN is the same as the old one")
+	ErrLastOwner         = errors.New("a shop needs at least one owner")
+	ErrSelf              = errors.New("not allowed on your own account")
 )
 
 type Store struct {

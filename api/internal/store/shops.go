@@ -18,6 +18,7 @@ import (
 	"counter-drop/api/internal/domain"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 const shopColumns = `id, slug, name, address, status, online_state, pause_message, timezone, opens_at, closes_at, price_list`
@@ -88,7 +89,7 @@ type CreateShopInput struct {
 	Name      string
 	Address   string
 	OwnerName string
-	OwnerPIN  string
+	OwnerPIN  string // empty: the owner is pending and chooses a PIN with a setup link
 }
 
 // CreateShop adds a live shop with two lanes (A: B/W, B: Colour), default prices and an owner.
@@ -111,7 +112,8 @@ func (s *Store) CreateShop(ctx context.Context, in CreateShopInput) (domain.Shop
 			($1, $2, 'A', 'B/W', 'bw', 0), ($3, $2, 'B', 'Colour', 'colour', 1)`, newID("lane"), id, newID("lane")); err != nil {
 			return err
 		}
-		return addStaffTx(ctx, tx, id, in.OwnerName, "owner", in.OwnerPIN)
+		_, err := addStaffTx(ctx, tx, id, in.OwnerName, "owner", in.OwnerPIN)
+		return err
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "cd_shops_slug_key") {
@@ -240,31 +242,50 @@ func verifyPIN(pin, encoded string) bool {
 	return err == nil && subtle.ConstantTimeCompare(got, want) == 1
 }
 
-func addStaffTx(ctx context.Context, tx pgx.Tx, shopID, name, role, pin string) error {
+// addStaffTx adds a staff member. An empty PIN makes them "pending": they choose a PIN with a setup link.
+func addStaffTx(ctx context.Context, tx pgx.Tx, shopID, name, role, pin string) (string, error) {
 	name = strings.TrimSpace(name)
-	if n := len(name); n < 2 || n > 30 {
-		return fmt.Errorf("%w: staff name must be 2–30 characters", domain.ErrValidation)
+	if n := len([]rune(name)); n < 2 || n > 30 {
+		return "", fmt.Errorf("%w: name must be 2–30 characters", domain.ErrValidation)
 	}
-	if !pinPattern.MatchString(pin) {
-		return fmt.Errorf("%w: PIN must be 4 digits", domain.ErrValidation)
+	if role != "owner" && role != "staff" {
+		return "", fmt.Errorf("%w: role must be owner or staff", domain.ErrValidation)
 	}
-	h, err := hashPIN(pin)
-	if err != nil {
-		return err
+	hash := ""
+	var pinSetAt *time.Time
+	if pin != "" {
+		if !pinPattern.MatchString(pin) {
+			return "", fmt.Errorf("%w: PIN must be 4 digits", domain.ErrValidation)
+		}
+		h, err := hashPIN(pin)
+		if err != nil {
+			return "", err
+		}
+		hash = h
+		now := time.Now()
+		pinSetAt = &now
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO cd_staff (id, shop_id, name, role, pin_hash) VALUES ($1, $2, $3, $4, $5)`,
-		newID("staff"), shopID, name, role, h)
-	return err
+	id := newID("staff")
+	_, err := tx.Exec(ctx, `INSERT INTO cd_staff (id, shop_id, name, role, pin_hash, pin_set_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+		id, shopID, name, role, hash, pinSetAt)
+	if err != nil && strings.Contains(err.Error(), "uq_cd_staff_active_name") {
+		return "", fmt.Errorf("%w: someone called %q already works here", domain.ErrValidation, name)
+	}
+	return id, err
 }
 
+// AddStaff adds someone with a known PIN (demo seed and tests). Real shops use InviteStaff.
 func (s *Store) AddStaff(ctx context.Context, shopID, name, role, pin string) error {
-	return pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error { return addStaffTx(ctx, tx, shopID, name, role, pin) })
+	return pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		_, err := addStaffTx(ctx, tx, shopID, name, role, pin)
+		return err
+	})
 }
 
 // StaffNames lists active staff for the login tiles.
 func (s *Store) StaffNames(ctx context.Context, slug string) ([]string, error) {
 	rows, err := s.pool.Query(ctx, `SELECT st.name FROM cd_staff st JOIN cd_shops sh ON sh.id = st.shop_id
-		WHERE sh.slug = $1 AND st.active ORDER BY st.role DESC, st.name`, strings.ToLower(slug))
+		WHERE sh.slug = $1 AND st.active AND st.pin_hash <> '' ORDER BY (st.role = 'owner') DESC, lower(st.name)`, strings.ToLower(slug))
 	if err != nil {
 		return nil, err
 	}
@@ -272,31 +293,50 @@ func (s *Store) StaffNames(ctx context.Context, slug string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(names) == 0 {
-		return nil, ErrNotFound
+	if names == nil {
+		names = []string{} // shop exists but nobody has finished setup yet
 	}
 	return names, nil
 }
 
 // Login checks a staff PIN and returns a new session token (shown once).
 func (s *Store) Login(ctx context.Context, slug, name, pin string, ttl time.Duration) (string, Principal, error) {
-	now := s.now()
 	var st Staff
-	var hash string
-	var failed int
-	var lockedUntil *time.Time
-	err := s.pool.QueryRow(ctx, `SELECT st.id, st.shop_id, st.name, st.role, st.pin_hash, st.failed_attempts, st.locked_until
+	err := s.pool.QueryRow(ctx, `SELECT st.id, st.shop_id, st.name, st.role
 		FROM cd_staff st JOIN cd_shops sh ON sh.id = st.shop_id
 		WHERE sh.slug = $1 AND st.name = $2 AND st.active`, strings.ToLower(slug), name).
-		Scan(&st.ID, &st.ShopID, &st.Name, &st.Role, &hash, &failed, &lockedUntil)
+		Scan(&st.ID, &st.ShopID, &st.Name, &st.Role)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", Principal{}, ErrBadPIN
 	}
 	if err != nil {
 		return "", Principal{}, err
 	}
+	if err := s.checkPIN(ctx, st.ID, pin); err != nil {
+		return "", Principal{}, err
+	}
+	return s.newSession(ctx, s.pool, st, ttl)
+}
+
+// checkPIN verifies a staff member's PIN with the lockout rule: 5 wrong tries lock the account for 15 minutes.
+func (s *Store) checkPIN(ctx context.Context, staffID, pin string) error {
+	now := s.now()
+	var hash string
+	var failed int
+	var lockedUntil *time.Time
+	err := s.pool.QueryRow(ctx, `SELECT pin_hash, failed_attempts, locked_until FROM cd_staff WHERE id = $1 AND active`, staffID).
+		Scan(&hash, &failed, &lockedUntil)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrBadPIN
+	}
+	if err != nil {
+		return err
+	}
+	if hash == "" {
+		return ErrSetupPending
+	}
 	if lockedUntil != nil && now.Before(*lockedUntil) {
-		return "", Principal{}, ErrLocked
+		return ErrLocked
 	}
 	if !verifyPIN(pin, hash) {
 		failed++
@@ -306,18 +346,24 @@ func (s *Store) Login(ctx context.Context, slug, name, pin string, ttl time.Dura
 			lock = &t
 			failed = 0
 		}
-		_, _ = s.pool.Exec(ctx, `UPDATE cd_staff SET failed_attempts = $2, locked_until = $3 WHERE id = $1`, st.ID, failed, lock)
+		_, _ = s.pool.Exec(ctx, `UPDATE cd_staff SET failed_attempts = $2, locked_until = $3 WHERE id = $1`, staffID, failed, lock)
 		if lock != nil {
-			return "", Principal{}, ErrLocked
+			return ErrLocked
 		}
-		return "", Principal{}, ErrBadPIN
+		return ErrBadPIN
 	}
+	_, err = s.pool.Exec(ctx, `UPDATE cd_staff SET failed_attempts = 0, locked_until = NULL WHERE id = $1`, staffID)
+	return err
+}
+
+type execer interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+}
+
+func (s *Store) newSession(ctx context.Context, q execer, st Staff, ttl time.Duration) (string, Principal, error) {
 	token := NewSecret()
-	exp := now.Add(ttl)
-	if _, err := s.pool.Exec(ctx, `UPDATE cd_staff SET failed_attempts = 0, locked_until = NULL WHERE id = $1`, st.ID); err != nil {
-		return "", Principal{}, err
-	}
-	if _, err := s.pool.Exec(ctx, `INSERT INTO cd_sessions (token_hash, staff_id, shop_id, expires_at) VALUES ($1, $2, $3, $4)`,
+	exp := s.now().Add(ttl)
+	if _, err := q.Exec(ctx, `INSERT INTO cd_sessions (token_hash, staff_id, shop_id, expires_at) VALUES ($1, $2, $3, $4)`,
 		HashSecret(token), st.ID, st.ShopID, exp); err != nil {
 		return "", Principal{}, err
 	}

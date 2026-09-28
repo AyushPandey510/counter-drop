@@ -58,6 +58,18 @@ func mapError(err error) (int, string, string) {
 		return 401, "bad_pin", "That PIN didn't match."
 	case errors.Is(err, store.ErrLocked):
 		return 429, "locked", "Too many wrong PINs. Try again in 15 minutes."
+	case errors.Is(err, store.ErrSetupPending):
+		return 401, "setup_pending", "Finish setting up with the link you were sent, then sign in."
+	case errors.Is(err, store.ErrLinkInvalid):
+		return 410, "link_invalid", "This link has expired or was already used. Ask the shop owner for a new one."
+	case errors.Is(err, store.ErrWeakPIN):
+		return 422, "weak_pin", "That PIN is too easy to guess. Avoid 1234, 1111, 1212 and similar."
+	case errors.Is(err, store.ErrSamePIN):
+		return 422, "same_pin", "Choose a PIN different from your current one."
+	case errors.Is(err, store.ErrLastOwner):
+		return 409, "last_owner", "A shop needs at least one owner."
+	case errors.Is(err, store.ErrSelf):
+		return 409, "self", "You can't do this to your own account. Use Change PIN instead."
 	case errors.Is(err, store.ErrNotEditable):
 		return 409, "not_editable", "This job is being printed and can't be changed."
 	case errors.Is(err, domain.ErrInvalidTransition):

@@ -18,12 +18,21 @@ Serve the PWA from the same process (one port, no CORS):
 CD_WEB_DIR=../web/dist CD_DATABASE_URL=... go run ./cmd/api     # open http://localhost:8080
 ```
 
-Create a real shop and staff:
+## Onboarding shops (`cdadmin`)
+
+Nobody hands out PINs. Creating or resetting an account prints a **one-time setup link** (valid 48 h) and a ready-to-send message; the person opens it and chooses their own PIN. Set `CD_PUBLIC_WEB_URL` (e.g. `https://counterdrop.in`) so links point at the right address.
 
 ```bash
-go run ./cmd/cdadmin create-shop -slug imran-xerox -name "Imran Xerox" -address "Station Rd, Pune" -owner Imran -pin 4821
-go run ./cmd/cdadmin add-staff -shop imran-xerox -name Sana -pin 7302 -role staff
+go run ./cmd/cdadmin create-shop  -slug imran-xerox -name "Imran Xerox" -address "Station Rd, Pune" -owner Imran
+go run ./cmd/cdadmin add-staff    -shop imran-xerox -name Sana [-role staff|owner]
+go run ./cmd/cdadmin reset-pin    -shop imran-xerox -name Sana     # old PIN stops working, signed out everywhere
+go run ./cmd/cdadmin remove-staff -shop imran-xerox -name Sana
+go run ./cmd/cdadmin list-staff   -shop imran-xerox
 ```
+
+After the owner has set their PIN they manage staff themselves in **Settings → Staff** (add, reset PIN, remove), and everyone can change their own PIN under **My account**.
+
+Rules: PINs are 4 digits and obvious ones (1234, 1111, 1212, 2580…) are refused; a link works once, only the newest link for a person works, and its token lives in the URL fragment so it never reaches server logs; a reset clears the old PIN and signs the person out; nobody can reset or remove themselves; a shop always keeps at least one owner.
 
 ## Layout
 
@@ -58,6 +67,12 @@ Shop — `Authorization: Bearer <session>`:
 | --- | --- | --- |
 | GET | `/shop/staff-names?shop=` | Names for the sign-in tiles |
 | POST | `/shop/login`, `/shop/logout`; GET `/shop/me` | PIN sign-in (5 wrong tries → 15 min lock) |
+| POST | `/shop/setup/info` `{token}` | Check a setup link (who, which shop, expiry) — no auth |
+| POST | `/shop/setup` `{token, pin}` | Use a setup link: set PIN and sign in — no auth |
+| PUT | `/shop/me/pin` `{currentPin, newPin}` | Change own PIN; signs out your other devices |
+| GET / POST | `/shop/staff` `{name, role}` | Owner: list staff; add a person → one-time link |
+| POST | `/shop/staff/{id}/link` | Owner: new setup link (reset clears the old PIN) |
+| DELETE | `/shop/staff/{id}` | Owner: remove a person |
 | GET | `/shop/queue` | Board snapshot |
 | POST | `/shop/claim-next` | Claim the oldest job in a lane (`SKIP LOCKED`) |
 | POST | `/shop/jobs/{id}/{claim,release,ready,collected,undo,cancel}` | Actions |

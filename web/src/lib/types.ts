@@ -158,3 +158,28 @@ export interface QueueSnapshot {
   undoWindowSeconds: number
   serverTime: string
 }
+
+export interface StaffMember {
+  id: string
+  name: string
+  role: 'owner' | 'staff'
+  pending: boolean
+  pinSetAt?: string
+  createdAt: string
+}
+
+export interface SetupLinkOut {
+  purpose: 'setup' | 'reset'
+  expiresAt: string
+  setupPath: string
+  setupUrl: string
+}
+
+export interface SetupInfo {
+  shopName: string
+  shopSlug: string
+  staffName: string
+  role: 'owner' | 'staff'
+  purpose: 'setup' | 'reset'
+  expiresAt: string
+}

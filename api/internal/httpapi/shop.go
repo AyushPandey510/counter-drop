@@ -54,12 +54,12 @@ func actor(r *http.Request) domain.Actor {
 
 func (s *Server) staffNames(w http.ResponseWriter, r *http.Request) {
 	slug := r.URL.Query().Get("shop")
-	names, err := s.Store.StaffNames(r.Context(), slug)
+	sh, err := s.Store.GetShopBySlug(r.Context(), slug)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	sh, err := s.Store.GetShopBySlug(r.Context(), slug)
+	names, err := s.Store.StaffNames(r.Context(), slug)
 	if err != nil {
 		s.fail(w, r, err)
 		return

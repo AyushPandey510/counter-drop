@@ -6,6 +6,7 @@ import { rupees } from '@/lib/format'
 import type { PriceList, Shop } from '@/lib/types'
 import { Banner, Button, Card, Spinner } from '@/components/ui'
 import { useShopAuth, useShopTheme } from './auth'
+import { StaffSection } from './StaffSection'
 
 type Form = {
   name: string
@@ -149,6 +150,8 @@ export default function SettingsPage() {
           {busy ? 'Saving…' : 'Save settings'}
         </Button>
       </form>
+
+      <StaffSection />
     </div>
   )
 }

@@ -8,8 +8,10 @@ import LoginPage from '@/shop/LoginPage'
 import BoardPage from '@/shop/BoardPage'
 import SettingsPage from '@/shop/SettingsPage'
 import QrPage from '@/shop/QrPage'
+import SetupPage from '@/shop/SetupPage'
+import AccountPage from '@/shop/AccountPage'
 
-// Customer routes (/, /s/:slug, /t/:jobId) are public; /shop/* needs a staff session.
+// Customer routes (/, /s/:slug, /t/:jobId) and /shop/login, /shop/setup are public; other /shop/* need a staff session.
 export default function App() {
   return (
     <BrowserRouter>
@@ -20,6 +22,8 @@ export default function App() {
             <Route path="/s/:slug" element={<DropPage />} />
             <Route path="/t/:jobId" element={<TicketPage />} />
             <Route path="/shop/login" element={<LoginPage />} />
+            <Route path="/shop/setup" element={<SetupPage />} />
+            <Route path="/shop/account" element={<RequireStaff><AccountPage /></RequireStaff>} />
             <Route path="/shop" element={<RequireStaff><BoardPage /></RequireStaff>} />
             <Route path="/shop/qr" element={<RequireStaff><QrPage /></RequireStaff>} />
             <Route path="/shop/settings" element={<RequireStaff owner><SettingsPage /></RequireStaff>} />

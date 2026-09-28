@@ -241,3 +241,16 @@ func TestShopHours(t *testing.T) {
 		t.Fatal("bw lane")
 	}
 }
+
+func TestWeakPIN(t *testing.T) {
+	for _, p := range []string{"0000", "1111", "1234", "0123", "6789", "9876", "3210", "1212", "4545", "2580", "123", "12345"} {
+		if !WeakPIN(p) {
+			t.Errorf("%s should be weak", p)
+		}
+	}
+	for _, p := range []string{"4821", "7302", "1357", "9027", "5190"} {
+		if WeakPIN(p) {
+			t.Errorf("%s should be allowed", p)
+		}
+	}
+}

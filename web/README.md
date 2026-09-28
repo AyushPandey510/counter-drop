@@ -18,9 +18,11 @@ Set `VITE_API_PROXY` to proxy to another API address in dev, or `VITE_API_BASE_U
 | `/s/:slug` | Walk-in drop page — upload only, pay at the counter (shop QR opens this) | MVP |
 | `/t/:jobId#secret` | Ticket: token, live status, ready moment, deletion receipt | MVP |
 | `/shop/login` | Shop link name → staff name → 4-digit PIN | MVP |
+| `/shop/setup#token` | One-time link: choose your own PIN, then signed in | MVP |
+| `/shop/account` | My account: change PIN, sign out | MVP |
 | `/shop` | Live queue board: lanes, claim, ready, collected, undo, cancel, search, Online/Paused/Offline | MVP |
 | `/shop/qr` | Printable A4 counter poster (EN/HI/MR) | MVP |
-| `/shop/settings` | Owner: name, address, hours, prices | MVP |
+| `/shop/settings` | Owner: name, address, hours, prices, staff (add, PIN links, remove) | MVP |
 | `/scan` | In-app QR scanner | Later (phone camera works today) |
 | `/nearby` | Print nearby: find, prepay by UPI, collect | R1b |
 | `/shop/mode`, `/tv/:slug`, `/admin/*` | Phone shop mode, TV display, admin | R1b / R2 |
@@ -33,7 +35,7 @@ src/
 ├── components/ui.tsx        # Button, Card, Chip, Segmented, Stepper, Banner…
 ├── lib/                     # api client, types, i18n (en/hi/mr), live (SSE), pdf page count, upload, tickets
 ├── customer/                # Home, DropPage, TicketPage
-└── shop/                    # auth, LoginPage, BoardPage, QrPage, SettingsPage
+└── shop/                    # auth, LoginPage, SetupPage, AccountPage, BoardPage, QrPage, SettingsPage, StaffSection
 ```
 
 Notes: page counts come from pdf.js on the phone (the server falls back to "pages confirmed at counter"). Live updates use Server-Sent Events with polling fallback. Customer screens are in English, Hindi and Marathi; shop screens are English only for now.
