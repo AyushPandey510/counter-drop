@@ -10,13 +10,12 @@ import (
 	"syscall"
 	"time"
 
+	"counter-drop/api/internal/app"
 	"counter-drop/api/internal/backend"
 	"counter-drop/api/internal/config"
 	"counter-drop/api/internal/domain"
 	"counter-drop/api/internal/httpapi"
 	"counter-drop/api/internal/realtime"
-	"counter-drop/api/internal/storage"
-	"counter-drop/api/internal/store"
 	"counter-drop/api/internal/tasks"
 )
 
@@ -50,7 +49,7 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		logger.Info("demo shop ready", "slug", "demo-print", "staff", "Owner (PIN 1234), Kavita (PIN 1111)")
 	}
 
-	objects, local, err := buildStorage(ctx, cfg, logger)
+	objects, local, err := app.BuildStorage(ctx, cfg, logger)
 	if err != nil {
 		return err
 	}
@@ -73,33 +72,4 @@ func run(cfg config.Config, logger *slog.Logger) error {
 		return err
 	}
 	return nil
-}
-
-func buildStorage(ctx context.Context, cfg config.Config, logger *slog.Logger) (storage.ObjectStore, *storage.LocalStore, error) {
-	dur := storage.Durations{PutTTL: cfg.Storage.PutTTL, GetTTL: cfg.Storage.GetTTL}
-	if cfg.Storage.S3Enabled() {
-		s3, err := storage.NewS3Store(ctx, storage.S3Config{
-			Endpoint: cfg.Storage.Endpoint, Region: cfg.Storage.Region, Bucket: cfg.Storage.Bucket,
-			AccessKey: cfg.Storage.AccessKey, SecretKey: cfg.Storage.SecretKey, Durations: dur,
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-		logger.Info("storage: S3-compatible bucket", "bucket", cfg.Storage.Bucket)
-		return s3, nil, nil
-	}
-	key := cfg.Storage.SigningKey
-	if key == "" {
-		if cfg.Env == "prod" {
-			return nil, nil, errors.New("CD_STORAGE_SIGNING_KEY is required for local storage in prod")
-		}
-		key = store.NewSecret()
-		logger.Warn("CD_STORAGE_SIGNING_KEY not set; using a random key (upload links reset on restart)")
-	}
-	local, err := storage.NewLocalStore(cfg.Storage.Dir, cfg.PublicAPIURL, []byte(key), dur)
-	if err != nil {
-		return nil, nil, err
-	}
-	logger.Info("storage: local disk", "dir", cfg.Storage.Dir, "public_api_url", cfg.PublicAPIURL)
-	return local, local, nil
 }

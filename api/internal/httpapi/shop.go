@@ -261,6 +261,10 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 
 // shopEvents streams board updates. EventSource can't send headers, so the session token comes in ?token=.
 func (s *Server) shopEvents(w http.ResponseWriter, r *http.Request) {
+	if s.NoSSE {
+		failCode(w, http.StatusNotFound, "not_found", "Live updates use the WebSocket from POST …/live.")
+		return
+	}
 	p, err := s.Store.Session(r.Context(), r.URL.Query().Get("token"))
 	if err != nil {
 		s.fail(w, r, err)

@@ -110,12 +110,36 @@ Ticket pages and shop boards get pointer events (`job.updated`, `queue.changed`,
 
 WebSocket connections open with a 60-second HMAC ticket (`CD_REALTIME_KEY`, 32+ characters, the same value in the API and the WebSocket Lambda); the job secret or session token never goes in a URL. The client reconnects with a fresh ticket and backoff, sends a heartbeat every 5 minutes (API Gateway drops idle sockets after 10), and refetches after any gap.
 
-On AWS the Lambda binary `cmd/lambda` handles it (`CD_RUNTIME`):
+On AWS the Lambda binary `cmd/lambda` handles it (see *Running on AWS Lambda* below):
 
 - `lambda-ws`: `$connect` checks the ticket and records the connection in `CD_WS_CONNECTIONS_TABLE` (default `cd-connections`); `$disconnect` removes it.
 - `lambda-push`: reads the main table's stream (new and old images), turns each change into events (`ddbstore.ChangeEvents`) and posts them through `CD_WS_MANAGEMENT_ENDPOINT`, dropping connections that are gone.
 
-Build: `GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -tags lambda.norpc -o bootstrap ./cmd/lambda`.
+## Running on AWS Lambda (ADR-001)
+
+One binary, `cmd/lambda`, four handlers chosen by `CD_RUNTIME`:
+
+| `CD_RUNTIME` | Trigger | What it does |
+| --- | --- | --- |
+| `lambda-api` | API Gateway HTTP API (payload 2.0), behind CloudFront | The same `httpapi` server as `cmd/api`, through `internal/lambdahttp` |
+| `lambda-sweeper` | EventBridge Scheduler, every minute, reserved concurrency 1 | One deletion-worker pass: drafts, uncollected jobs, due files (Delete + Head check). Returns an error if any step failed, so failed runs show in metrics |
+| `lambda-ws` | API Gateway WebSocket routes | `$connect` ticket check, `$disconnect` cleanup |
+| `lambda-push` | DynamoDB stream of `cd-main` | Live-update fan-out |
+
+Build (arm64, runtime `provided.al2023`, handler file `bootstrap`):
+
+```bash
+GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -tags lambda.norpc -trimpath -ldflags "-s -w" -o bootstrap ./cmd/lambda
+```
+
+Differences from the long-running server, enforced at cold start (the function refuses to start otherwise):
+
+- **Live updates** use the WebSocket API: `CD_REALTIME_WS_URL=wss://…` and `CD_REALTIME_KEY` are required; the SSE endpoints answer 404.
+- **Files** go to S3 (`CD_STORAGE_BUCKET`); there is no lasting local disk.
+- **Shared rate limits:** sign-in, setup links, staff names and new jobs are counted in DynamoDB (`RL#<rule>|<ip>`, one-minute windows, TTL), so every Lambda instance sees the same count. Other limits are per instance; API Gateway throttling covers the rest.
+- **Client IP:** `CD_CLIENT_IP_HEADER=CloudFront-Viewer-Address` makes limits use the viewer's address, not the CloudFront edge's.
+- **Origin check:** with `CD_ORIGIN_SECRET` set, every request must carry `X-Origin-Verify` (CloudFront adds it as a custom origin header), so the API Gateway URL can't be used directly to bypass CloudFront.
+- **No background goroutines:** the sweeper is its own scheduled function.
 
 ## Protection
 

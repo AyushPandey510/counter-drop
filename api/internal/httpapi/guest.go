@@ -361,6 +361,10 @@ func (s *Server) payJob(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) jobEvents(w http.ResponseWriter, r *http.Request) {
+	if s.NoSSE {
+		failCode(w, http.StatusNotFound, "not_found", "Live updates use the WebSocket from POST …/live.")
+		return
+	}
 	id := r.PathValue("id")
 	if err := s.Store.VerifySecret(r.Context(), id, r.URL.Query().Get("secret")); err != nil {
 		s.fail(w, r, err)

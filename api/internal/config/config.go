@@ -38,6 +38,13 @@ type Config struct {
 	// client IP from X-Forwarded-For; set it only behind a proxy that sets that header (ALB, Caddy).
 	RateLimit  bool
 	TrustProxy bool
+	// ClientIPHeader names a header set by the CDN that holds the viewer's address, e.g.
+	// "CloudFront-Viewer-Address" (ip:port). Only set it when requests can reach the API solely
+	// through that CDN (see OriginSecret).
+	ClientIPHeader string
+	// OriginSecret, when set, must arrive in X-Origin-Verify on every request. CloudFront adds it,
+	// so nobody can call the API Gateway URL directly and bypass the CDN and its client-IP header.
+	OriginSecret string
 }
 
 // DynamoConfig configures the DynamoDB table that holds all data (ADR-001). Endpoint is only for
@@ -124,6 +131,8 @@ func Load() Config {
 		PublicWebURL:     strings.TrimRight(str("CD_PUBLIC_WEB_URL", defaultWebURL()), "/"),
 		RateLimit:        boolean("CD_RATE_LIMIT", true),
 		TrustProxy:       boolean("CD_TRUST_PROXY", false),
+		ClientIPHeader:   str("CD_CLIENT_IP_HEADER", ""),
+		OriginSecret:     str("CD_ORIGIN_SECRET", ""),
 	}
 }
 

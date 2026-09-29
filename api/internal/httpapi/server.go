@@ -24,6 +24,13 @@ type Server struct {
 	Logger  *slog.Logger
 	Cfg     config.Config
 
+	// SharedLimits, when set, keeps the sign-in, setup, staff-name and new-job limits in a store all
+	// instances share (DynamoDB on Lambda). Other limits stay per instance.
+	SharedLimits ratelimit.Shared
+	// NoSSE turns off the Server-Sent Events endpoints (Lambda can't hold a stream open; clients use
+	// the WebSocket from /live instead).
+	NoSSE bool
+
 	limiter *ratelimit.Limiter
 }
 
@@ -104,7 +111,7 @@ func (s *Server) Handler() http.Handler {
 		h = spaFallback(s.Cfg.WebDir, mux)
 	}
 	// Order: recover → request ID → log → security headers → rate limit → CORS → routes.
-	return chain(s.securityHeaders(s.rateLimit(h)), s.Logger, s.Cfg.WebOrigins)
+	return chain(s.originCheck(s.securityHeaders(s.rateLimit(h))), s.Logger, s.Cfg.WebOrigins)
 }
 
 // spaFallback serves the built PWA for non-API paths, with index.html for client-side routes.
