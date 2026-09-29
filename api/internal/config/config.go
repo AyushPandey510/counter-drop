@@ -19,6 +19,8 @@ type Config struct {
 
 	Storage StorageConfig
 
+	Realtime RealtimeConfig
+
 	UndoWindow       time.Duration
 	AbandonAfter     time.Duration
 	DeletionInterval time.Duration
@@ -44,6 +46,20 @@ type DynamoConfig struct {
 	Table    string
 	Region   string
 	Endpoint string
+}
+
+// RealtimeConfig chooses how browsers get live updates.
+//
+//	WSURL ""        Server-Sent Events from this API (default; one process)
+//	WSURL "local"   WebSocket served by this API at /ws (dev: exercises the same client code as AWS)
+//	WSURL "wss://…" API Gateway WebSocket (AWS, ADR-001); pushes come from the DynamoDB stream
+//
+// Key signs the short-lived connection tickets; the WebSocket Lambda must have the same key.
+type RealtimeConfig struct {
+	WSURL              string
+	Key                string
+	ConnectionsTable   string
+	ManagementEndpoint string // https://<api-id>.execute-api.<region>.amazonaws.com/<stage> (push Lambda)
 }
 
 type StorageConfig struct {
@@ -89,6 +105,12 @@ func Load() Config {
 			SigningKey: str("CD_STORAGE_SIGNING_KEY", ""),
 			PutTTL:     dur("CD_STORAGE_PUT_TTL", 15*time.Minute),
 			GetTTL:     dur("CD_STORAGE_GET_TTL", 5*time.Minute),
+		},
+		Realtime: RealtimeConfig{
+			WSURL:              strings.TrimRight(str("CD_REALTIME_WS_URL", ""), "/"),
+			Key:                str("CD_REALTIME_KEY", ""),
+			ConnectionsTable:   str("CD_WS_CONNECTIONS_TABLE", "cd-connections"),
+			ManagementEndpoint: str("CD_WS_MANAGEMENT_ENDPOINT", ""),
 		},
 		UndoWindow:       dur("CD_UNDO_WINDOW", 10*time.Minute),
 		AbandonAfter:     dur("CD_ABANDON_AFTER", 60*time.Minute),

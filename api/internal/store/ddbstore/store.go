@@ -114,7 +114,7 @@ func CreateTableInput(table string) *dynamodb.CreateTableInput {
 		AttributeDefinitions:   defs,
 		KeySchema:              []types.KeySchemaElement{{AttributeName: aws.String("PK"), KeyType: types.KeyTypeHash}, {AttributeName: aws.String("SK"), KeyType: types.KeyTypeRange}},
 		GlobalSecondaryIndexes: gsis,
-		StreamSpecification:    &types.StreamSpecification{StreamEnabled: aws.Bool(true), StreamViewType: types.StreamViewTypeNewImage},
+		StreamSpecification:    &types.StreamSpecification{StreamEnabled: aws.Bool(true), StreamViewType: types.StreamViewTypeNewAndOldImages},
 	}
 }
 

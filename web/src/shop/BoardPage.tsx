@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, Download, ExternalLink, FileCheck2, LogOut, Moon, Play, Printer, QrCode, RotateCcw, Search, Settings, Sun, Undo2, UserRound, Volume2, VolumeX, X, Zap } from 'lucide-react'
 import { ApiError } from '@/lib/api'
-import { chime, useLive } from '@/lib/live'
+import { chime, useLive, type LiveTicket } from '@/lib/live'
 import { clock, dayTime, minutesSince, mmss, rupees } from '@/lib/format'
 import type { Job, JobState, OnlineState, QueueSnapshot } from '@/lib/types'
 import { Banner, Button, Chip, Logo, Spinner } from '@/components/ui'
@@ -68,7 +68,14 @@ export default function BoardPage() {
   useEffect(() => {
     load()
   }, [load])
-  useLive(session ? `/shop/events?token=${encodeURIComponent(session.token)}` : null, () => load(), load, 10000)
+  const live = useMemo(
+    () =>
+      session
+        ? { sse: `/shop/events?token=${encodeURIComponent(session.token)}`, ticket: () => call<LiveTicket>('/shop/live', { method: 'POST' }) }
+        : null,
+    [session, call],
+  )
+  useLive(live, () => load(), load, 10000)
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(id)

@@ -16,6 +16,20 @@ type Event struct {
 	Data any    `json:"data,omitempty"`
 }
 
+// Message is an event addressed to a topic (job:<id> or shop:<id>).
+type Message struct {
+	Topic string
+	Event Event
+}
+
+// Publisher sends events to everyone watching a topic. The in-process Hub (SSE, and the local
+// WebSocket emulation) implements it; on AWS, events come from the DynamoDB stream instead.
+type Publisher interface {
+	Publish(topic string, ev Event)
+}
+
+var _ Publisher = (*Hub)(nil)
+
 type subscriber chan []byte
 
 type Hub struct {
@@ -62,6 +76,13 @@ func (h *Hub) unsubscribe(topic string, sub subscriber) {
 		delete(h.topics, topic)
 	}
 	h.mu.Unlock()
+}
+
+// Subscribe returns a channel of encoded events for a topic and a function to stop listening.
+// Slow readers miss events rather than block publishers (the client refetches on reconnect).
+func (h *Hub) Subscribe(topic string) (<-chan []byte, func()) {
+	sub := h.subscribe(topic)
+	return sub, func() { h.unsubscribe(topic, sub) }
 }
 
 // Count returns the number of open connections (metrics / tests).

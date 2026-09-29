@@ -266,6 +266,45 @@ paths:
               schema: { type: string }
         "403": { $ref: "#/components/responses/Error" }
 
+  /api/v1/cd/jobs/{id}/live:
+    post:
+      tags: [Customer]
+      summary: Get a live-update ticket for this job (SSE or WebSocket)
+      security:
+        - TicketSecret: []
+      parameters:
+        - $ref: "#/components/parameters/JobID"
+      responses:
+        "200":
+          description: How to connect for live updates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [mode]
+                    properties:
+                      mode: { type: string, enum: [sse, ws], description: "sse: open the /events stream. ws: open a WebSocket to url with ?t=<ticket>" }
+                      url: { type: string, description: "wss://… (API Gateway). Empty in local mode: this API's /ws" }
+                      ticket: { type: string, description: "Signed, valid 60 s; only opens this topic" }
+                      expiresAt: { type: string, format: date-time }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/ws:
+    get:
+      tags: [Customer]
+      summary: Local WebSocket for live updates (only when CD_REALTIME_WS_URL=local; on AWS use the url from /live)
+      parameters:
+        - name: t
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "101": { description: WebSocket; each message is {"type":…,"data":…}; send {"type":"ping"} as a heartbeat }
+        "401": { $ref: "#/components/responses/Error" }
+
   /api/v1/cd/shop/staff-names:
     get:
       tags: [Shop Auth]
@@ -681,6 +720,30 @@ paths:
           content:
             text/event-stream:
               schema: { type: string }
+        "401": { $ref: "#/components/responses/Error" }
+
+  /api/v1/cd/shop/live:
+    post:
+      tags: [Shop Queue]
+      summary: Get a live-update ticket for this shop's board (SSE or WebSocket)
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: How to connect for live updates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [mode]
+                    properties:
+                      mode: { type: string, enum: [sse, ws], description: "sse: open the /events stream. ws: open a WebSocket to url with ?t=<ticket>" }
+                      url: { type: string, description: "wss://… (API Gateway). Empty in local mode: this API's /ws" }
+                      ticket: { type: string, description: "Signed, valid 60 s; only opens this topic" }
+                      expiresAt: { type: string, format: date-time }
         "401": { $ref: "#/components/responses/Error" }
 
   /api/v1/cd/shop/deletion-health:

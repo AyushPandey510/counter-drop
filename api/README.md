@@ -72,6 +72,7 @@ Customer — the ticket secret goes in the `X-Ticket-Secret` header (or `?secret
 | POST | `/jobs/{id}/cancel` | Cancel and withdraw the files while in line |
 | POST | `/jobs/{id}/delete-request` | After pickup: delete Counter Drop's copy now and ask the shop to delete any copy it downloaded |
 | GET | `/jobs/{id}/events` | SSE stream |
+| POST | `/jobs/{id}/live` | Live-update ticket: `{mode:"sse"}` or `{mode:"ws", url, ticket}` |
 
 Shop — `Authorization: Bearer <session>`:
 
@@ -95,6 +96,26 @@ Shop — `Authorization: Bearer <session>`:
 | GET / PUT | `/shop/settings` | Owner: profile, hours, prices |
 | GET | `/shop/deletion-health` | Owner: deletion backlog and failures |
 | GET | `/shop/events?token=` | SSE stream |
+| POST | `/shop/live` | Live-update ticket for the board |
+
+## Live updates
+
+Ticket pages and shop boards get pointer events (`job.updated`, `queue.changed`, `file.downloaded`, `job.files_deleted`, `shop.state`) and refetch through the normal API. The client first calls `POST …/live`; the answer picks the transport:
+
+| `CD_REALTIME_WS_URL` | Transport | Used for |
+| --- | --- | --- |
+| empty (default) | Server-Sent Events from this process | Dev, single-server fallback |
+| `local` | WebSocket served by this process at `/api/v1/cd/ws` | Dev: runs the same browser code as AWS |
+| `wss://ws.<domain>` | API Gateway WebSocket; pushes come from the DynamoDB stream | AWS (ADR-001) |
+
+WebSocket connections open with a 60-second HMAC ticket (`CD_REALTIME_KEY`, 32+ characters, the same value in the API and the WebSocket Lambda); the job secret or session token never goes in a URL. The client reconnects with a fresh ticket and backoff, sends a heartbeat every 5 minutes (API Gateway drops idle sockets after 10), and refetches after any gap.
+
+On AWS the Lambda binary `cmd/lambda` handles it (`CD_RUNTIME`):
+
+- `lambda-ws`: `$connect` checks the ticket and records the connection in `CD_WS_CONNECTIONS_TABLE` (default `cd-connections`); `$disconnect` removes it.
+- `lambda-push`: reads the main table's stream (new and old images), turns each change into events (`ddbstore.ChangeEvents`) and posts them through `CD_WS_MANAGEMENT_ENDPOINT`, dropping connections that are gone.
+
+Build: `GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -tags lambda.norpc -o bootstrap ./cmd/lambda`.
 
 ## Protection
 

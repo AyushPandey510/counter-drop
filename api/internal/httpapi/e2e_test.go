@@ -67,6 +67,9 @@ func openTestStore(t *testing.T, ctx context.Context) store.Repository {
 // Most tests fire many requests from one address; the rate-limit test turns limits on itself.
 var rateLimitInTests = false
 
+// liveModeInTests is CD_REALTIME_WS_URL for the next setup ("" = SSE, "local" = the API's own WebSocket).
+var liveModeInTests = ""
+
 func setup(t *testing.T) *env {
 	t.Helper()
 	ctx := context.Background()
@@ -89,6 +92,7 @@ func setup(t *testing.T) *env {
 	cfg := config.Load()
 	cfg.UndoWindow = 10 * time.Minute
 	cfg.RateLimit = rateLimitInTests
+	cfg.Realtime.WSURL = liveModeInTests
 	hub := realtime.NewHub()
 	srv := &httpapi.Server{Store: st, Objects: local, Local: local, Hub: hub, Logger: logger, Cfg: cfg}
 	ts.Config.Handler = srv.Handler()

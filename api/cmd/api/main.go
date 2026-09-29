@@ -33,6 +33,9 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	if ws := cfg.Realtime.WSURL; ws != "" && ws != "local" && len(cfg.Realtime.Key) < 32 {
+		return errors.New("CD_REALTIME_KEY (32+ characters, shared with the WebSocket Lambda) is required when CD_REALTIME_WS_URL is set")
+	}
 	policy := domain.Policy{UndoWindow: cfg.UndoWindow, AbandonAfter: cfg.AbandonAfter}
 	st, err := backend.Open(ctx, cfg, policy)
 	if err != nil {

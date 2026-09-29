@@ -8,7 +8,12 @@ import (
 	"time"
 
 	"counter-drop/api/internal/domain"
+	"counter-drop/api/internal/realtime"
 	"counter-drop/api/internal/store"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 // These tests need a DynamoDB endpoint (DynamoDB Local or moto): CD_TEST_DYNAMODB_ENDPOINT.
@@ -155,5 +160,89 @@ func TestStaffNameGuard(t *testing.T) {
 	}
 	if _, err := st.CreateShop(ctx, store.CreateShopInput{Slug: "unit-shop", Name: "Again", OwnerName: "Xavier"}); err != store.ErrSlugTaken {
 		t.Fatalf("slug reuse: %v", err)
+	}
+}
+
+func (s *Store) rawItem(t *testing.T, pk, sk string) map[string]types.AttributeValue {
+	t.Helper()
+	res, err := s.db.GetItem(context.Background(), &dynamodb.GetItemInput{TableName: &s.table, Key: key(pk, sk), ConsistentRead: aws.Bool(true)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return res.Item
+}
+
+func eventTypes(msgs []realtime.Message) map[string]string {
+	out := map[string]string{}
+	for _, m := range msgs {
+		out[m.Event.Type] = m.Topic
+	}
+	return out
+}
+
+// Stream records become the same pointer events the API hub publishes.
+func TestChangeEventsFromStreamImages(t *testing.T) {
+	st := newTestStore(t)
+	ctx := context.Background()
+	sh, j := newDraft(t, st)
+	fileID := j.Files[0].ID
+
+	// New draft: the customer's ticket hears about it, the shop board doesn't.
+	created := st.rawItem(t, jobPK(j.ID), "JOB")
+	msgs, err := ChangeEvents(nil, created)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ev := eventTypes(msgs); ev["job.updated"] != "job:"+j.ID || ev["queue.changed"] != "" {
+		t.Fatalf("draft events: %v", ev)
+	}
+
+	// Sending the job puts it on the shop's board.
+	if _, err := st.FileUploaded(ctx, j.ID, fileID, 3); err != nil {
+		t.Fatal(err)
+	}
+	before := st.rawItem(t, jobPK(j.ID), "JOB")
+	if _, _, err := st.Submit(ctx, j.ID, "", ""); err != nil {
+		t.Fatal(err)
+	}
+	after := st.rawItem(t, jobPK(j.ID), "JOB")
+	msgs, _ = ChangeEvents(before, after)
+	if ev := eventTypes(msgs); ev["queue.changed"] != "shop:"+sh.ID || ev["job.updated"] != "job:"+j.ID {
+		t.Fatalf("submit events: %v", ev)
+	}
+
+	// A download tells the customer.
+	before = after
+	if _, err := st.RecordFileAccess(ctx, j.ID, fileID, "Kavita", true); err != nil {
+		t.Fatal(err)
+	}
+	after = st.rawItem(t, jobPK(j.ID), "JOB")
+	msgs, _ = ChangeEvents(before, after)
+	if ev := eventTypes(msgs); ev["file.downloaded"] != "job:"+j.ID {
+		t.Fatalf("download events: %v", ev)
+	}
+	// Printing (opening) is not a download.
+	before = after
+	if _, err := st.RecordFileAccess(ctx, j.ID, fileID, "Kavita", false); err != nil {
+		t.Fatal(err)
+	}
+	msgs, _ = ChangeEvents(before, st.rawItem(t, jobPK(j.ID), "JOB"))
+	if ev := eventTypes(msgs); ev["file.downloaded"] != "" {
+		t.Fatalf("print counted as download: %v", ev)
+	}
+
+	// Pausing the shop reaches the board as shop.state; other settings as shop.updated.
+	before = st.rawItem(t, "S#"+sh.ID, "PROFILE")
+	if _, err := st.SetShopState(ctx, sh.ID, domain.ShopPaused, "Lunch"); err != nil {
+		t.Fatal(err)
+	}
+	msgs, _ = ChangeEvents(before, st.rawItem(t, "S#"+sh.ID, "PROFILE"))
+	if ev := eventTypes(msgs); ev["shop.state"] != "shop:"+sh.ID {
+		t.Fatalf("shop events: %v", ev)
+	}
+
+	// Other items (events, counters, sessions) produce nothing.
+	if msgs, _ := ChangeEvents(nil, map[string]types.AttributeValue{"PK": sv("SESS#x"), "SK": sv("SESS")}); len(msgs) != 0 {
+		t.Fatalf("session produced %v", msgs)
 	}
 }

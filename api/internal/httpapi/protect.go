@@ -22,6 +22,9 @@ func (s *Server) contentSecurityPolicy() string {
 	if o := originOf(s.Cfg.PublicAPIURL); o != "" {
 		connect = append(connect, o)
 	}
+	if o := s.wsOrigin(); o != "" {
+		connect = append(connect, o)
+	}
 	if st := s.Cfg.Storage; st.S3Enabled() {
 		if o := originOf(st.Endpoint); o != "" {
 			connect = append(connect, o)
@@ -110,7 +113,7 @@ var limitRules = []limitRule{
 		return r.Method == "PUT" && strings.HasPrefix(r.URL.Path, apiPrefix+"/files/")
 	}},
 	{"events", 30, 10, func(r *http.Request) bool {
-		return r.Method == "GET" && strings.HasSuffix(r.URL.Path, "/events")
+		return r.Method == "GET" && (strings.HasSuffix(r.URL.Path, "/events") || r.URL.Path == apiPrefix+"/ws")
 	}},
 	{"guest-write", 120, 60, func(r *http.Request) bool {
 		return r.Method != "GET" && strings.HasPrefix(r.URL.Path, apiPrefix+"/jobs/")

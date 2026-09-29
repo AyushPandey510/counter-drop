@@ -4,7 +4,7 @@ import { BellRing, Check, Download, Lock, ShieldCheck, Share2, Trash2 } from 'lu
 import { api, ApiError, store } from '@/lib/api'
 import { useI18n, type Key } from '@/lib/i18n'
 import { clock, dayTime, mmss, rupees } from '@/lib/format'
-import { chime, useLive } from '@/lib/live'
+import { chime, useLive, type LiveTicket } from '@/lib/live'
 import { findTicket, saveTicket } from '@/lib/tickets'
 import type { Job, JobState, Ticket } from '@/lib/types'
 import { Banner, Button, Card, Spinner, stateMeta } from '@/components/ui'
@@ -71,7 +71,12 @@ export default function TicketPage() {
     load()
   }, [load])
   useLive(
-    secret ? `/jobs/${jobId}/events?secret=${encodeURIComponent(secret)}` : null,
+    secret
+      ? {
+          sse: `/jobs/${jobId}/events?secret=${encodeURIComponent(secret)}`,
+          ticket: () => api<LiveTicket>(`/jobs/${jobId}/live`, { method: 'POST', secret }),
+        }
+      : null,
     (e) => {
       // A download is something the customer should notice even if the screen is idle.
       if (e.type === 'file.downloaded') navigator.vibrate?.(200)

@@ -33,6 +33,11 @@ func (s *Server) limits() store.Limits {
 
 // Handler builds the full HTTP handler.
 func (s *Server) Handler() http.Handler {
+	if s.Cfg.Realtime.WSURL != "" && s.Cfg.Realtime.Key == "" {
+		// Local mode signs and checks tickets in this one process, so a per-run key is enough.
+		// On AWS the key must be shared with the WebSocket Lambda (cmd/api refuses to start without it).
+		s.Cfg.Realtime.Key = store.NewSecret()
+	}
 	mux := http.NewServeMux()
 	const p = "/api/v1/cd"
 
@@ -60,6 +65,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST "+p+"/jobs/{id}/delete-request", s.guest(s.requestDeletion))
 	mux.HandleFunc("POST "+p+"/jobs/{id}/pay", s.guest(s.payJob))
 	mux.HandleFunc("GET "+p+"/jobs/{id}/events", s.jobEvents)
+	mux.HandleFunc("POST "+p+"/jobs/{id}/live", s.guest(s.jobLive))
 
 	// Shop routes.
 	mux.HandleFunc("GET "+p+"/shop/staff-names", s.staffNames)
@@ -83,6 +89,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET "+p+"/shop/settings", s.staff(s.getSettings))
 	mux.HandleFunc("PUT "+p+"/shop/settings", s.owner(s.putSettings))
 	mux.HandleFunc("GET "+p+"/shop/events", s.shopEvents)
+	mux.HandleFunc("POST "+p+"/shop/live", s.staff(s.shopLive))
+	if s.Cfg.Realtime.WSURL == "local" {
+		mux.HandleFunc("GET "+p+"/ws", s.localWS)
+	}
 	mux.HandleFunc("GET "+p+"/shop/deletion-health", s.owner(s.deletionHealth))
 
 	if s.Local != nil {
