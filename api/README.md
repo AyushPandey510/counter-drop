@@ -1,21 +1,29 @@
 # Counter Drop API
 
-Go 1.27 service (`net/http` + pgx on Postgres) for the R1a walk-in flow: QR drop page, tickets, staff PIN sign-in, live queue, pricing, daily tokens per lane, and the deletion worker.
+Go 1.27 service (`net/http`, data in one DynamoDB table behind the `store.Repository` interface — ADR-001) for the R1a walk-in flow: QR drop page, tickets, staff PIN sign-in, live queue, pricing, daily tokens per lane, and the deletion worker.
 
 ## Run
 
 ```bash
-docker compose -f ../deploy/docker-compose.yml up -d postgres
-CD_DATABASE_URL='postgres://counter_drop:counter_drop@localhost:55433/counter_drop?sslmode=disable' go run ./cmd/api
+docker compose -f ../deploy/docker-compose.yml up -d dynamodb      # DynamoDB Local on :8000
+CD_DYNAMODB_ENDPOINT=http://localhost:8000 go run ./cmd/api
 ```
 
-Migrations in `migrations/` run at start-up. In dev the `demo-print` shop is seeded (Owner PIN `1234`, Kavita PIN `1111`). Files go to local disk (`.data/files`) unless all `CD_STORAGE_*` R2 values are set. All settings: `../deploy/.env.example`.
+With an endpoint set, the API creates the table on start. In dev the `demo-print` shop is seeded (Owner PIN `1234`, Kavita PIN `1111`). DynamoDB Local runs in memory, so data resets when it restarts. Files go to local disk (`.data/files`) unless the `CD_STORAGE_*` S3/R2 values are set. All settings: `../deploy/.env.example`.
+
+| Variable | Default | |
+| --- | --- | --- |
+| `CD_DYNAMODB_TABLE` | `cd-main` | Table name |
+| `CD_DYNAMODB_REGION` | `$AWS_REGION` or `ap-south-1` | |
+| `CD_DYNAMODB_ENDPOINT` | — | Only for DynamoDB Local; leave empty on AWS (the Lambda/task role supplies credentials) |
+
+`cdadmin` uses the same variables. On AWS, `cdadmin create-table` creates the table with its indexes, TTL and 7-day point-in-time recovery if CDK hasn't.
 
 Serve the PWA from the same process (one port, no CORS):
 
 ```bash
 (cd ../web && npm install && npm run build)
-CD_WEB_DIR=../web/dist CD_DATABASE_URL=... go run ./cmd/api     # open http://localhost:8080
+CD_WEB_DIR=../web/dist CD_DYNAMODB_ENDPOINT=http://localhost:8000 go run ./cmd/api     # open http://localhost:8080
 ```
 
 ## Onboarding shops (`cdadmin`)
@@ -23,6 +31,7 @@ CD_WEB_DIR=../web/dist CD_DATABASE_URL=... go run ./cmd/api     # open http://lo
 Nobody hands out PINs. Creating or resetting an account prints a **one-time setup link** (valid 48 h) and a ready-to-send message; the person opens it and chooses their own PIN. Set `CD_PUBLIC_WEB_URL` (e.g. `https://counterdrop.in`) so links point at the right address.
 
 ```bash
+go run ./cmd/cdadmin create-table                                 # once per AWS environment (not needed locally)
 go run ./cmd/cdadmin create-shop  -slug imran-xerox -name "Imran Xerox" -address "Station Rd, Pune" -owner Imran
 go run ./cmd/cdadmin add-staff    -shop imran-xerox -name Sana [-role staff|owner]
 go run ./cmd/cdadmin reset-pin    -shop imran-xerox -name Sana     # old PIN stops working, signed out everywhere
@@ -39,7 +48,9 @@ Rules: PINs are 4 digits and obvious ones (1234, 1111, 1212, 2580…) are refuse
 | Package | What |
 | --- | --- |
 | `internal/domain` | Pure rules: job state machine and effects, pricing and page ranges, tokens, wait estimate, shop hours |
-| `internal/store` | Postgres: shops, staff and sessions, jobs and files, queue, retention |
+| `internal/store` | `Repository` interface, shared types, business rules (`rules.go`), IDs/secrets/PIN hashing |
+| `internal/store/ddbstore` | DynamoDB: single table, jobs with embedded files, four sparse GSIs, optimistic locking |
+| `internal/backend` | Opens the DynamoDB store from the config |
 | `internal/httpapi` | Routes, auth middleware, `{data}` / `{error:{code,message}}` envelope, handlers, end-to-end tests |
 | `internal/realtime` | Server-Sent Events hub (job and shop topics) |
 | `internal/tasks` | Deletion worker and draft abandonment |
@@ -89,12 +100,13 @@ Shop — `Authorization: Bearer <session>`:
 
 - **Rate limits** per client IP (`CD_RATE_LIMIT`, on by default): sign-in 10/min, setup links 20/min, staff names 30/min, new jobs 10/min, uploads 60/min, live-update connections 30/min, other customer actions 120/min, everything else 600/min. Over the limit: HTTP 429 with `Retry-After`. Behind a proxy set `CD_TRUST_PROXY=true` so the real client IP (last `X-Forwarded-For` entry) is used; without it a forged header is ignored. Limits live in memory, so run one API instance.
 - **Security headers** on every response: Content-Security-Policy (own scripts only, no inline scripts, no framing; uploads allowed to the storage origin), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` (camera only for the in-app scanner), and HSTS when `CD_ENV=prod`. Customer files are served without a CSP so the browser's PDF viewer works.
-- **Migrations** run under a Postgres advisory lock, so containers starting together (rolling deploys) take turns.
+- **Concurrent writers** are safe: every change is a conditional write on the job's version, retried from a fresh read, so two counters (or two containers during a deploy) never act on the same job at once.
 
 ## Tests
 
 ```bash
-CD_TEST_DATABASE_URL='postgres://counter_drop:counter_drop@localhost:55433/counter_drop_test?sslmode=disable' go test ./...
+docker compose -f ../deploy/docker-compose.yml up -d dynamodb
+CD_TEST_DYNAMODB_ENDPOINT=http://localhost:8000 go test ./...
 ```
 
-Create the test database once: `docker compose -f ../deploy/docker-compose.yml exec postgres createdb -U counter_drop counter_drop_test`. The end-to-end tests are skipped when `CD_TEST_DATABASE_URL` is not set.
+Each test gets its own table, dropped afterwards. The end-to-end tests are skipped when `CD_TEST_DYNAMODB_ENDPOINT` is not set.

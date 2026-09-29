@@ -28,6 +28,8 @@
         { "name": "CD_PUBLIC_API_URL", "value": "https://app.your-domain.example" },
         { "name": "CD_PUBLIC_WEB_URL", "value": "https://app.your-domain.example" },
         { "name": "CD_WEB_ORIGINS", "value": "https://app.your-domain.example" },
+        { "name": "CD_DYNAMODB_TABLE", "value": "cd-main" },
+        { "name": "CD_DYNAMODB_REGION", "value": "ap-south-1" },
         { "name": "CD_STORAGE_REGION", "value": "ap-south-1" },
         { "name": "CD_STORAGE_BUCKET", "value": "counter-drop-prod-files" },
         { "name": "CD_UNDO_WINDOW", "value": "10m" },
@@ -38,12 +40,6 @@
         { "name": "CD_MAX_FILES", "value": "20" },
         { "name": "CD_SESSION_TTL", "value": "12h" },
         { "name": "CD_SETUP_LINK_TTL", "value": "48h" }
-      ],
-      "secrets": [
-        {
-          "name": "CD_DATABASE_URL",
-          "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/counter-drop/prod/CD_DATABASE_URL"
-        }
       ],
       "healthCheck": {
         "command": ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ready >/dev/null || exit 1"],

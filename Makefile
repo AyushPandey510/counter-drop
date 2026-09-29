@@ -15,7 +15,7 @@ BUILD_ARGS = --build-arg VITE_OPERATOR_NAME="$(VITE_OPERATOR_NAME)" --build-arg 
 help:
 	@printf '%s\n' \
 	  'Counter Drop commands:' \
-	  '  make dev-db        Start local Postgres' \
+	  '  make dev-db        Start DynamoDB Local (port 8000)' \
 	  '  make api-dev       Run API on :18080 for LAN phone testing' \
 	  '  make web-dev       Run Vite on :5174 for LAN phone testing' \
 	  '  make test          Run API tests and web build' \
@@ -26,18 +26,19 @@ help:
 	  '  make launch-check  Run launch readiness checks'
 
 dev-db:
-	docker compose -f deploy/docker-compose.yml up -d postgres
+	docker compose -f deploy/docker-compose.yml up -d dynamodb
 
 api-dev:
-	cd $(API_DIR) && CD_API_ADDR=:18080 CD_PUBLIC_API_URL=$${CD_PUBLIC_API_URL:-http://localhost:18080} CD_PUBLIC_WEB_URL=$${CD_PUBLIC_WEB_URL:-http://localhost:5174} CD_WEB_ORIGINS=$${CD_WEB_ORIGINS:-http://localhost:5174} CD_DATABASE_URL=$${CD_DATABASE_URL:-postgres://counter_drop:counter_drop@localhost:55433/counter_drop?sslmode=disable} go run ./cmd/api
+	cd $(API_DIR) && CD_API_ADDR=:18080 CD_PUBLIC_API_URL=$${CD_PUBLIC_API_URL:-http://localhost:18080} CD_PUBLIC_WEB_URL=$${CD_PUBLIC_WEB_URL:-http://localhost:5174} CD_WEB_ORIGINS=$${CD_WEB_ORIGINS:-http://localhost:5174} CD_DYNAMODB_ENDPOINT=$${CD_DYNAMODB_ENDPOINT:-http://localhost:8000} go run ./cmd/api
 
 web-dev:
 	cd $(WEB_DIR) && VITE_API_PROXY=$${VITE_API_PROXY:-http://localhost:18080} npm run dev -- --host 0.0.0.0 --port 5174
 
 test: test-api test-web
 
+# Needs DynamoDB Local (make dev-db); without it the end-to-end tests are skipped.
 test-api:
-	cd $(API_DIR) && go test ./...
+	cd $(API_DIR) && CD_TEST_DYNAMODB_ENDPOINT=$${CD_TEST_DYNAMODB_ENDPOINT:-http://localhost:8000} go test ./...
 
 test-web:
 	cd $(WEB_DIR) && npm run build

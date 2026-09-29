@@ -1,3 +1,5 @@
+# Container fallback (one VM + Caddy). Data lives in the AWS DynamoDB table named in prod.env;
+# the main deployment is Lambda + CDK (ADR-001).
 services:
   app:
     build:
@@ -9,31 +11,11 @@ services:
     image: counter-drop:prod
     env_file:
       - prod.env
-    environment:
-      CD_DATABASE_URL: postgres://counter_drop:${POSTGRES_PASSWORD}@postgres:5432/counter_drop?sslmode=disable
     # Plain HTTP only on this machine: HTTPS comes from Caddy (--profile https) or your own proxy/tunnel.
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
       - counter_drop_files:/data/files
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-
-  postgres:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_DB: counter_drop
-      POSTGRES_USER: counter_drop
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - counter_drop_pg:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U counter_drop"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
     restart: unless-stopped
 
   # Automatic HTTPS (Let's Encrypt). Start with: docker compose ... --profile https up -d
@@ -56,7 +38,6 @@ services:
       - app
 
 volumes:
-  counter_drop_pg:
   counter_drop_files:
   caddy_data:
   caddy_config:

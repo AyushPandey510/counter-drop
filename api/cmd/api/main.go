@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"counter-drop/api/internal/backend"
 	"counter-drop/api/internal/config"
 	"counter-drop/api/internal/domain"
 	"counter-drop/api/internal/httpapi"
@@ -32,18 +33,13 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if cfg.DatabaseURL == "" {
-		return errors.New("CD_DATABASE_URL is required (start Postgres with: docker compose -f deploy/docker-compose.yml up -d postgres)")
-	}
 	policy := domain.Policy{UndoWindow: cfg.UndoWindow, AbandonAfter: cfg.AbandonAfter}
-	st, err := store.New(ctx, cfg.DatabaseURL, policy)
+	st, err := backend.Open(ctx, cfg, policy)
 	if err != nil {
 		return err
 	}
 	defer st.Close()
-	if err := st.ApplyMigrations(ctx, cfg.MigrationsDir); err != nil {
-		return err
-	}
+	logger.Info("store ready", "table", cfg.Dynamo.Table, "local_endpoint", cfg.Dynamo.Endpoint)
 	if cfg.DemoSeed {
 		if err := st.SeedDemo(ctx); err != nil {
 			return err

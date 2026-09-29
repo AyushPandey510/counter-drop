@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"counter-drop/api/internal/domain"
-	"counter-drop/api/internal/storage"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -107,7 +106,7 @@ func (s *Store) VerifySecret(ctx context.Context, jobID, secret string) error {
 	if err != nil {
 		return err
 	}
-	if hash == nil || !equalHash(secret, *hash) {
+	if hash == nil || !EqualHash(secret, *hash) {
 		return ErrBadSecret
 	}
 	return nil
@@ -132,7 +131,7 @@ type Limits struct {
 	MaxFiles     int
 }
 
-func validName(name string) (string, error) {
+func ValidName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if len([]rune(name)) > 20 {
 		return "", fmt.Errorf("%w: first name must be 20 characters or fewer", domain.ErrValidation)
@@ -140,7 +139,7 @@ func validName(name string) (string, error) {
 	return name, nil
 }
 
-func validateFiles(files []NewFile, lim Limits, existing int64, existingCount int) error {
+func ValidateFiles(files []NewFile, lim Limits, existing int64, existingCount int) error {
 	if len(files) == 0 {
 		return fmt.Errorf("%w: choose at least one file", domain.ErrValidation)
 	}
@@ -166,7 +165,7 @@ func validateFiles(files []NewFile, lim Limits, existing int64, existingCount in
 	return nil
 }
 
-func shopAccepting(sh domain.Shop, now time.Time) error {
+func ShopAccepting(sh domain.Shop, now time.Time) error {
 	if sh.Status != "live" {
 		return ErrNotFound
 	}
@@ -183,18 +182,18 @@ func shopAccepting(sh domain.Shop, now time.Time) error {
 // ticket secret once; only its hash is stored.
 func (s *Store) CreateJob(ctx context.Context, sh domain.Shop, in CreateJobInput, lim Limits) (domain.Job, string, error) {
 	now := s.now()
-	if err := shopAccepting(sh, now); err != nil {
+	if err := ShopAccepting(sh, now); err != nil {
 		return domain.Job{}, "", err
 	}
-	name, err := validName(in.CustomerName)
+	name, err := ValidName(in.CustomerName)
 	if err != nil {
 		return domain.Job{}, "", err
 	}
-	if err := validateFiles(in.Files, lim, 0, 0); err != nil {
+	if err := ValidateFiles(in.Files, lim, 0, 0); err != nil {
 		return domain.Job{}, "", err
 	}
 	secret := NewSecret()
-	jobID := newID("job")
+	jobID := NewID("job")
 	err = pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `INSERT INTO cd_jobs (id, shop_id, channel, secret_hash, customer_name, settings, state, created_at, updated_at, business_day)
 			VALUES ($1, $2, 'walkin', $3, $4, '{}'::jsonb, 'uploading', $5, $5, $6)`,
@@ -211,21 +210,15 @@ func (s *Store) CreateJob(ctx context.Context, sh domain.Shop, in CreateJobInput
 }
 
 func insertFiles(ctx context.Context, tx pgx.Tx, shopID, jobID string, files []NewFile) error {
-	for _, f := range files {
-		id := newID("file")
-		key, err := storage.FileKey(shopID, jobID, id)
+	for _, in := range files {
+		f, err := NewJobFile(shopID, jobID, in)
 		if err != nil {
 			return err
 		}
-		settings, _ := json.Marshal(domain.DefaultFileSettings())
-		pagesStatus := domain.PagesPending
-		pages := 0
-		if domain.FileKind(f.Mime) == "image" {
-			pagesStatus, pages = domain.PagesCounted, 1
-		}
+		settings, _ := json.Marshal(f.Settings)
 		if _, err := tx.Exec(ctx, `INSERT INTO cd_job_files (id, job_id, filename, size_bytes, mime, pages, pages_status, settings, object_key, upload_status, delete_status, created_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'active', clock_timestamp())`,
-			id, jobID, strings.TrimSpace(f.Filename), f.Size, f.Mime, pages, pagesStatus, settings, key); err != nil {
+			f.ID, jobID, f.Filename, f.Size, f.Mime, f.Pages, f.PagesStatus, settings, f.ObjectKey); err != nil {
 			return err
 		}
 	}
@@ -250,7 +243,7 @@ func (s *Store) AddFiles(ctx context.Context, jobID string, files []NewFile, lim
 				live++
 			}
 		}
-		if err := validateFiles(files, lim, size, live); err != nil {
+		if err := ValidateFiles(files, lim, size, live); err != nil {
 			return err
 		}
 		return insertFiles(ctx, tx, j.ShopID, j.ID, files)
@@ -282,21 +275,12 @@ func (s *Store) FileUploaded(ctx context.Context, jobID, fileID string, pages in
 		if !found {
 			return ErrNotFound
 		}
-		status := domain.PagesCounted
-		if domain.FileKind(f.Mime) == "image" {
-			pages = 1
-		} else if pages <= 0 || pages > 2000 {
-			pages, status = 0, domain.PagesUnknown
-		}
+		pages, status := UploadedPages(f.Mime, pages)
 		sh, err := s.GetShopByID(ctx, j.ShopID)
 		if err != nil {
 			return err
 		}
-		now := s.now()
-		expiry := sh.ClosingTime(now)
-		if cap := now.Add(24 * time.Hour); expiry.After(cap) || !expiry.After(now) {
-			expiry = cap
-		}
+		expiry := DraftFileExpiry(sh, s.now())
 		_, err = tx.Exec(ctx, `UPDATE cd_job_files SET upload_status = 'uploaded', pages = $3, pages_status = $4, delete_after = $5
 			WHERE id = $2 AND job_id = $1`, jobID, fileID, pages, status, expiry)
 		f.Pages, f.PagesStatus, f.UploadStatus = pages, status, domain.UploadStatusUploaded
@@ -341,7 +325,7 @@ func (s *Store) UpdateJob(ctx context.Context, jobID string, name *string, files
 		if err != nil {
 			return err
 		}
-		if j.State != domain.JobStateUploading && !(j.State == domain.JobStateQueued && j.ClaimedAt == nil) {
+		if !CanEdit(j) {
 			return ErrNotEditable
 		}
 		sh, err := s.GetShopByID(ctx, j.ShopID)
@@ -349,7 +333,7 @@ func (s *Store) UpdateJob(ctx context.Context, jobID string, name *string, files
 			return err
 		}
 		if name != nil {
-			n, err := validName(*name)
+			n, err := ValidName(*name)
 			if err != nil {
 				return err
 			}
@@ -367,8 +351,8 @@ func (s *Store) UpdateJob(ctx context.Context, jobID string, name *string, files
 			if target == nil {
 				return ErrNotFound
 			}
-			st := domain.NormaliseSettings(u.Settings, domain.FileKind(target.Mime))
-			if _, err := domain.ComputeQuote(sh.Prices, []domain.QuoteFile{{ID: target.ID, Kind: domain.FileKind(target.Mime), Pages: target.Pages, Settings: st}}); err != nil {
+			st, err := EditableSettings(sh, *target, u.Settings)
+			if err != nil {
 				return err
 			}
 			b, _ := json.Marshal(st)
@@ -422,37 +406,13 @@ func (s *Store) Submit(ctx context.Context, jobID, priceVersion, name string) (d
 			return err
 		}
 		now := s.now()
-		if err := shopAccepting(sh, now); err != nil {
+		if err := ShopAccepting(sh, now); err != nil {
 			return err
 		}
-		live := 0
-		anyColour := false
-		for _, f := range j.Files {
-			if f.DeleteStatus != domain.DeleteStatusActive {
-				continue
-			}
-			live++
-			if f.UploadStatus != domain.UploadStatusUploaded {
-				return ErrUploadsIncomplete
-			}
-			anyColour = anyColour || f.Settings.Colour
-		}
-		if live == 0 {
-			return ErrUploadsIncomplete
-		}
-		active := j
-		active.Files = nil
-		for _, f := range j.Files {
-			if f.DeleteStatus == domain.DeleteStatusActive {
-				active.Files = append(active.Files, f)
-			}
-		}
-		quote, err = QuoteFor(sh, active)
+		var anyColour bool
+		quote, anyColour, err = SubmitCheck(sh, j, priceVersion)
 		if err != nil {
 			return err
-		}
-		if priceVersion != "" && priceVersion != quote.PriceVersion {
-			return ErrPriceChanged
 		}
 		fx, err := domain.Transition(&j, domain.ActionSubmit, domain.Actor{Type: domain.ActorGuest}, "", now, s.policy)
 		if err != nil {
@@ -476,10 +436,9 @@ func (s *Store) Submit(ctx context.Context, jobID, priceVersion, name string) (d
 		if err != nil {
 			return err
 		}
-		own := 3 + float64(quote.PagesTotal)/20
-		readyBy := now.Add(time.Duration(float64(wait.HighMinutes)+own) * time.Minute)
+		readyBy := ReadyBy(now, wait, quote.PagesTotal)
 		if name != "" {
-			if n, err := validName(name); err == nil {
+			if n, err := ValidName(name); err == nil {
 				j.CustomerName = n
 			}
 		}
@@ -673,7 +632,7 @@ func waitFor(ctx context.Context, q rowQuerier, shopID string, now time.Time) (d
 	}
 	var counters int
 	if err := q.QueryRow(ctx, `SELECT count(DISTINCT claimed_by) FROM cd_jobs WHERE shop_id = $1 AND claimed_at > $2 AND claimed_by <> ''`,
-		shopID, now.Add(-30*time.Minute)).Scan(&counters); err != nil {
+		shopID, now.Add(-ActiveCounterWindow)).Scan(&counters); err != nil {
 		return domain.WaitEstimate{}, err
 	}
 	return domain.EstimateWait(pages, 3, counters), nil
@@ -700,14 +659,7 @@ func (s *Store) Lookup(ctx context.Context, shopID, q string) ([]domain.Job, err
 	if q == "" {
 		return []domain.Job{}, nil
 	}
-	token := ""
-	up := strings.ToUpper(strings.ReplaceAll(strings.ReplaceAll(q, "-", ""), " ", ""))
-	if len(up) >= 2 && up[0] >= 'A' && up[0] <= 'Z' {
-		var n int
-		if _, err := fmt.Sscanf(up[1:], "%d", &n); err == nil && n > 0 {
-			token = domain.FormatToken(up[:1], n)
-		}
-	}
+	token := LookupToken(q)
 	rows, err := s.pool.Query(ctx, `SELECT `+jobColumns+jobFrom+`
 		WHERE j.shop_id = $1 AND j.state IN ('queued','claimed','ready','collected')
 		  AND j.created_at > $4
@@ -867,7 +819,7 @@ func (s *Store) copiesToDelete(ctx context.Context, shopID string, now time.Time
 		WHERE j.shop_id = $1 AND j.state IN ('collected', 'cancelled') AND j.copies_deleted_at IS NULL
 		  AND j.updated_at > $2
 		  AND EXISTS (SELECT 1 FROM cd_job_files f WHERE f.job_id = j.id AND f.downloads > 0)
-		ORDER BY j.copies_delete_requested_at DESC NULLS LAST, j.collected_at DESC NULLS LAST LIMIT 100`, shopID, now.Add(-30*24*time.Hour))
+		ORDER BY j.copies_delete_requested_at DESC NULLS LAST, j.collected_at DESC NULLS LAST LIMIT 100`, shopID, now.Add(-CopiesWindow))
 	if err != nil {
 		return nil, err
 	}

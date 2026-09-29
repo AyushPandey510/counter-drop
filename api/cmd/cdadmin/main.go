@@ -3,12 +3,15 @@
 // Nobody hands out PINs: every command that creates or resets an account prints a one-time
 // setup link. The person opens it and chooses their own PIN. Links expire (CD_SETUP_LINK_TTL, 48h).
 //
+//	cdadmin create-table                      (once per environment, if CDK didn't create the table)
 //	cdadmin create-shop  -slug imran-xerox -name "Imran Xerox" -address "Station Rd, Pune" -owner Imran
 //	cdadmin add-staff    -shop imran-xerox -name Sana [-role staff|owner]
 //	cdadmin reset-pin    -shop imran-xerox -name Sana
 //	cdadmin remove-staff -shop imran-xerox -name Sana
 //	cdadmin list-staff   -shop imran-xerox
 //
+// It talks to the DynamoDB table (CD_DYNAMODB_TABLE, CD_DYNAMODB_REGION; CD_DYNAMODB_ENDPOINT for DynamoDB Local)
+// with your AWS credentials.
 // Set CD_PUBLIC_WEB_URL to the address shops open (e.g. https://counterdrop.in) so links are correct.
 package main
 
@@ -20,9 +23,11 @@ import (
 	"strings"
 	"time"
 
+	"counter-drop/api/internal/backend"
 	"counter-drop/api/internal/config"
 	"counter-drop/api/internal/domain"
 	"counter-drop/api/internal/store"
+	"counter-drop/api/internal/store/ddbstore"
 )
 
 func main() {
@@ -30,18 +35,16 @@ func main() {
 		usage()
 	}
 	cfg := config.Load()
-	if cfg.DatabaseURL == "" {
-		fail("CD_DATABASE_URL is required")
-	}
 	ctx := context.Background()
-	st, err := store.New(ctx, cfg.DatabaseURL, domain.DefaultPolicy())
+	if os.Args[1] == "create-table" {
+		createTable(ctx, cfg)
+		return
+	}
+	st, err := backend.Open(ctx, cfg, domain.DefaultPolicy())
 	if err != nil {
 		fail(err.Error())
 	}
 	defer st.Close()
-	if err := st.ApplyMigrations(ctx, cfg.MigrationsDir); err != nil {
-		fail(err.Error())
-	}
 
 	cmd, args := os.Args[1], os.Args[2:]
 	switch cmd {
@@ -139,7 +142,22 @@ func main() {
 	}
 }
 
-func shop(ctx context.Context, st *store.Store, slug string) domain.Shop {
+// createTable creates the DynamoDB table with its indexes, TTL and point-in-time recovery.
+func createTable(ctx context.Context, cfg config.Config) {
+	ds, err := ddbstore.New(ctx, ddbstore.Config{Table: cfg.Dynamo.Table, Region: cfg.Dynamo.Region, Endpoint: cfg.Dynamo.Endpoint}, domain.DefaultPolicy())
+	if err != nil {
+		fail(err.Error())
+	}
+	if err := ds.EnsureTable(ctx); err != nil {
+		fail(err.Error())
+	}
+	if err := ds.Configure(ctx); err != nil {
+		fail(err.Error())
+	}
+	fmt.Printf("Table %s is ready in %s (4 indexes, TTL on \"ttl\", point-in-time recovery %d days).\n", cfg.Dynamo.Table, cfg.Dynamo.Region, ddbstore.PITRDays)
+}
+
+func shop(ctx context.Context, st store.Repository, slug string) domain.Shop {
 	sh, err := st.GetShopBySlug(ctx, slug)
 	if err != nil {
 		fail("shop not found: " + slug)
@@ -166,6 +184,7 @@ func printLink(cfg config.Config, shopName, person, role string, link store.Setu
 
 func usage() {
 	fmt.Fprintln(os.Stderr, `usage:
+  cdadmin create-table
   cdadmin create-shop  -slug S -name N -owner O [-address A]
   cdadmin add-staff    -shop S -name N [-role staff|owner]
   cdadmin reset-pin    -shop S -name N

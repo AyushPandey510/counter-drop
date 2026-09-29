@@ -94,30 +94,30 @@ type CreateShopInput struct {
 
 // CreateShop adds a live shop with two lanes (A: B/W, B: Colour), default prices and an owner.
 func (s *Store) CreateShop(ctx context.Context, in CreateShopInput) (domain.Shop, error) {
-	in.Slug = strings.ToLower(strings.TrimSpace(in.Slug))
-	if !slugPattern.MatchString(in.Slug) || reservedSlugs[in.Slug] {
-		return domain.Shop{}, fmt.Errorf("%w: slug must be 3–30 lowercase letters, digits or hyphens", domain.ErrValidation)
+	in, err := ValidateNewShop(in)
+	if err != nil {
+		return domain.Shop{}, err
 	}
-	if n := len(strings.TrimSpace(in.Name)); n < 3 || n > 60 {
-		return domain.Shop{}, fmt.Errorf("%w: shop name must be 3–60 characters", domain.ErrValidation)
-	}
-	id := newID("shop")
+	id := NewID("shop")
+	lanes := DefaultLanes()
 	prices, _ := json.Marshal(domain.DefaultPriceList())
-	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+	err = pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `INSERT INTO cd_shops (id, slug, name, address, intake_paused, prices, wait_minutes, price_list)
-			VALUES ($1, $2, $3, $4, false, '{}'::jsonb, 0, $5)`, id, in.Slug, strings.TrimSpace(in.Name), in.Address, prices); err != nil {
+			VALUES ($1, $2, $3, $4, false, '{}'::jsonb, 0, $5)`, id, in.Slug, in.Name, in.Address, prices); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO cd_lanes (id, shop_id, letter, name, rule, sort) VALUES
-			($1, $2, 'A', 'B/W', 'bw', 0), ($3, $2, 'B', 'Colour', 'colour', 1)`, newID("lane"), id, newID("lane")); err != nil {
-			return err
+		for i, l := range lanes {
+			if _, err := tx.Exec(ctx, `INSERT INTO cd_lanes (id, shop_id, letter, name, rule, sort) VALUES ($1, $2, $3, $4, $5, $6)`,
+				l.ID, id, l.Letter, l.Name, l.Rule, i); err != nil {
+				return err
+			}
 		}
 		_, err := addStaffTx(ctx, tx, id, in.OwnerName, "owner", in.OwnerPIN)
 		return err
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "cd_shops_slug_key") {
-			return domain.Shop{}, fmt.Errorf("%w: that link name is taken", domain.ErrValidation)
+			return domain.Shop{}, ErrSlugTaken
 		}
 		return domain.Shop{}, err
 	}
@@ -150,11 +150,9 @@ func (s *Store) SeedDemo(ctx context.Context) error {
 }
 
 func (s *Store) SetShopState(ctx context.Context, shopID string, state domain.OnlineState, msg string) (domain.Shop, error) {
-	if state != domain.ShopOnline && state != domain.ShopPaused && state != domain.ShopOffline {
-		return domain.Shop{}, fmt.Errorf("%w: state must be online, paused or offline", domain.ErrValidation)
-	}
-	if len(msg) > 140 {
-		msg = msg[:140]
+	msg, err := ValidateShopState(state, msg)
+	if err != nil {
+		return domain.Shop{}, err
 	}
 	if _, err := s.pool.Exec(ctx, `UPDATE cd_shops SET online_state = $2, pause_message = $3, intake_paused = ($2 <> 'online'), updated_at = now() WHERE id = $1`,
 		shopID, string(state), msg); err != nil {
@@ -174,29 +172,17 @@ type ShopProfile struct {
 var hhmm = regexp.MustCompile(`^([01]\d|2[0-3]):[0-5]\d$`)
 
 func (s *Store) UpdateShopSettings(ctx context.Context, shopID string, p ShopProfile, prices domain.PriceList) (domain.Shop, error) {
-	if n := len(strings.TrimSpace(p.Name)); n < 3 || n > 60 {
-		return domain.Shop{}, fmt.Errorf("%w: shop name must be 3–60 characters", domain.ErrValidation)
-	}
-	if !hhmm.MatchString(p.OpensAt) || !hhmm.MatchString(p.ClosesAt) || p.ClosesAt <= p.OpensAt {
-		return domain.Shop{}, fmt.Errorf("%w: closing time must be after opening time (HH:MM)", domain.ErrValidation)
-	}
-	if err := prices.Validate(); err != nil {
-		return domain.Shop{}, err
-	}
 	cur, err := s.GetShopByID(ctx, shopID)
 	if err != nil {
 		return domain.Shop{}, err
 	}
-	if p.HoldDays == 0 {
-		p.HoldDays = cur.HoldDays
+	p, prices, err = ValidateSettings(cur, p, prices)
+	if err != nil {
+		return domain.Shop{}, err
 	}
-	if p.HoldDays < 1 || p.HoldDays > 7 {
-		return domain.Shop{}, fmt.Errorf("%w: uncollected jobs can be kept 1–7 days", domain.ErrValidation)
-	}
-	prices.Version = cur.Prices.Version + 1
 	b, _ := json.Marshal(prices)
 	if _, err := s.pool.Exec(ctx, `UPDATE cd_shops SET name = $2, address = $3, opens_at = $4, closes_at = $5, price_list = $6, hold_days = $7, updated_at = now() WHERE id = $1`,
-		shopID, strings.TrimSpace(p.Name), strings.TrimSpace(p.Address), p.OpensAt, p.ClosesAt, b, p.HoldDays); err != nil {
+		shopID, p.Name, p.Address, p.OpensAt, p.ClosesAt, b, p.HoldDays); err != nil {
 		return domain.Shop{}, err
 	}
 	return s.GetShopByID(ctx, shopID)
@@ -218,7 +204,7 @@ type Principal struct {
 
 var pinPattern = regexp.MustCompile(`^\d{4}$`)
 
-func hashPIN(pin string) (string, error) {
+func HashPIN(pin string) (string, error) {
 	salt := make([]byte, 16)
 	if _, err := rand.Read(salt); err != nil {
 		return "", err
@@ -231,7 +217,7 @@ func hashPIN(pin string) (string, error) {
 	return fmt.Sprintf("pbkdf2-sha256$%d$%s$%s", iter, base64.RawStdEncoding.EncodeToString(salt), base64.RawStdEncoding.EncodeToString(key)), nil
 }
 
-func verifyPIN(pin, encoded string) bool {
+func VerifyPIN(pin, encoded string) bool {
 	parts := strings.Split(encoded, "$")
 	if len(parts) != 4 || parts[0] != "pbkdf2-sha256" {
 		return false
@@ -251,32 +237,20 @@ func verifyPIN(pin, encoded string) bool {
 
 // addStaffTx adds a staff member. An empty PIN makes them "pending": they choose a PIN with a setup link.
 func addStaffTx(ctx context.Context, tx pgx.Tx, shopID, name, role, pin string) (string, error) {
-	name = strings.TrimSpace(name)
-	if n := len([]rune(name)); n < 2 || n > 30 {
-		return "", fmt.Errorf("%w: name must be 2–30 characters", domain.ErrValidation)
+	name, hash, err := NewStaffRecord(name, role, pin)
+	if err != nil {
+		return "", err
 	}
-	if role != "owner" && role != "staff" {
-		return "", fmt.Errorf("%w: role must be owner or staff", domain.ErrValidation)
-	}
-	hash := ""
 	var pinSetAt *time.Time
-	if pin != "" {
-		if !pinPattern.MatchString(pin) {
-			return "", fmt.Errorf("%w: PIN must be 4 digits", domain.ErrValidation)
-		}
-		h, err := hashPIN(pin)
-		if err != nil {
-			return "", err
-		}
-		hash = h
+	if hash != "" {
 		now := time.Now()
 		pinSetAt = &now
 	}
-	id := newID("staff")
-	_, err := tx.Exec(ctx, `INSERT INTO cd_staff (id, shop_id, name, role, pin_hash, pin_set_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+	id := NewID("staff")
+	_, err = tx.Exec(ctx, `INSERT INTO cd_staff (id, shop_id, name, role, pin_hash, pin_set_at) VALUES ($1, $2, $3, $4, $5, $6)`,
 		id, shopID, name, role, hash, pinSetAt)
 	if err != nil && strings.Contains(err.Error(), "uq_cd_staff_active_name") {
-		return "", fmt.Errorf("%w: someone called %q already works here", domain.ErrValidation, name)
+		return "", ErrNameTaken(name)
 	}
 	return id, err
 }
@@ -345,11 +319,11 @@ func (s *Store) checkPIN(ctx context.Context, staffID, pin string) error {
 	if lockedUntil != nil && now.Before(*lockedUntil) {
 		return ErrLocked
 	}
-	if !verifyPIN(pin, hash) {
+	if !VerifyPIN(pin, hash) {
 		failed++
 		var lock *time.Time
-		if failed >= 5 {
-			t := now.Add(15 * time.Minute)
+		if failed >= MaxPINAttempts {
+			t := now.Add(LockoutFor)
 			lock = &t
 			failed = 0
 		}

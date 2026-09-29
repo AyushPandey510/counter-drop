@@ -11,7 +11,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -24,15 +23,14 @@ import (
 	"counter-drop/api/internal/realtime"
 	"counter-drop/api/internal/storage"
 	"counter-drop/api/internal/store"
+	"counter-drop/api/internal/store/ddbstore"
 	"counter-drop/api/internal/tasks"
-
-	"github.com/jackc/pgx/v5"
 )
 
 type env struct {
 	t       *testing.T
 	url     string
-	store   *store.Store
+	store   store.Repository
 	deleter *tasks.Deleter
 	clock   *fakeClock
 	dir     string
@@ -46,9 +44,24 @@ type fakeClock struct {
 func (c *fakeClock) Now() time.Time          { c.mu.Lock(); defer c.mu.Unlock(); return c.t }
 func (c *fakeClock) Advance(d time.Duration) { c.mu.Lock(); c.t = c.t.Add(d); c.mu.Unlock() }
 
-func migrationsDir() string {
-	_, file, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(file), "..", "..", "migrations")
+// openTestStore gives each test its own empty DynamoDB table on CD_TEST_DYNAMODB_ENDPOINT
+// (DynamoDB Local or moto). Without it the end-to-end tests are skipped.
+func openTestStore(t *testing.T, ctx context.Context) store.Repository {
+	t.Helper()
+	endpoint := os.Getenv("CD_TEST_DYNAMODB_ENDPOINT")
+	if endpoint == "" {
+		t.Skip("CD_TEST_DYNAMODB_ENDPOINT not set (start DynamoDB Local: docker compose -f deploy/docker-compose.yml up -d dynamodb)")
+	}
+	table := fmt.Sprintf("cd-test-%d", time.Now().UnixNano())
+	ds, err := ddbstore.New(ctx, ddbstore.Config{Table: table, Region: "ap-south-1", Endpoint: endpoint}, domain.DefaultPolicy())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ds.EnsureTable(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ds.DeleteTable(context.Background()) })
+	return ds
 }
 
 // Most tests fire many requests from one address; the rate-limit test turns limits on itself.
@@ -56,31 +69,11 @@ var rateLimitInTests = false
 
 func setup(t *testing.T) *env {
 	t.Helper()
-	dsn := os.Getenv("CD_TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("CD_TEST_DATABASE_URL not set")
-	}
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, dsn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := conn.Exec(ctx, `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`); err != nil {
-		t.Fatal(err)
-	}
-	conn.Close(ctx)
-
-	st, err := store.New(ctx, dsn, domain.DefaultPolicy())
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(st.Close)
+	st := openTestStore(t, ctx)
 	// 11:00 IST on a weekday: the demo shop is open.
 	clock := &fakeClock{t: time.Date(2026, 10, 1, 5, 30, 0, 0, time.UTC)}
 	st.SetClock(clock.Now)
-	if err := st.ApplyMigrations(ctx, migrationsDir()); err != nil {
-		t.Fatal(err)
-	}
 	if err := st.SeedDemo(ctx); err != nil {
 		t.Fatal(err)
 	}

@@ -1,13 +1,14 @@
 # AWS Deployment
 
-This is the recommended AWS shape for the Counter Drop pilot:
+> **Interim path.** The target is Lambda + DynamoDB built by a CDK stack (ADR-001, `docs/` in the project). Until that stack exists, this page runs the same container on ECS Fargate against the same DynamoDB table, so data carries over unchanged when you move to Lambda.
+
+This AWS shape runs the Counter Drop container:
 
 - **ECR** for the Docker image built from the root `Dockerfile`.
 - **ECS Fargate** for the app container.
-- **RDS PostgreSQL 17** for the database.
+- **DynamoDB** table `cd-main` for all data (no database server, no passwords: access is through the task role).
 - **S3** for uploaded print files.
 - **Application Load Balancer + ACM** for HTTPS.
-- **SSM Parameter Store or Secrets Manager** for `CD_DATABASE_URL`.
 - **CloudWatch Logs** for app logs.
 
 The Go API serves the built PWA from the same container, so the browser origin and API origin can be the same HTTPS URL.
@@ -27,20 +28,17 @@ Create these once:
 
 1. ECR repository: `counter-drop`.
 2. S3 bucket for uploaded files, for example `counter-drop-prod-files`.
-3. RDS PostgreSQL database.
+3. DynamoDB table `cd-main` (below).
 4. ECS cluster and Fargate service behind an ALB.
 5. ACM certificate for `app.your-domain.example`.
 6. CloudWatch log group `/ecs/counter-drop-prod`.
-7. ECS task execution role with the normal ECR/CloudWatch permissions plus `execution-role-secrets-policy.json` for SSM secrets.
-8. ECS app task role with S3 permissions from `app-task-role-policy.json`.
+7. ECS task execution role with the normal ECR/CloudWatch permissions (no secrets to read).
+8. ECS app task role with DynamoDB and S3 permissions from `app-task-role-policy.json` (fill in region and account).
 
-For RDS, create a database/user and store the app URL in SSM:
+Create the table once, with your own AWS credentials (it creates the four indexes, turns on TTL and 7-day point-in-time recovery):
 
 ```bash
-aws ssm put-parameter \
-  --name /counter-drop/prod/CD_DATABASE_URL \
-  --type SecureString \
-  --value 'postgres://counter_drop:<password>@<rds-endpoint>:5432/counter_drop?sslmode=require'
+cd api && CD_DYNAMODB_TABLE=cd-main CD_DYNAMODB_REGION=ap-south-1 go run ./cmd/cdadmin create-table
 ```
 
 ## 3. Configure S3 CORS
@@ -117,7 +115,7 @@ aws ecs update-service \
 
 ### Run exactly one task
 
-Set the ECS service's **desired count to 1**. Live updates and rate limits are kept in the container's memory, so a second task would miss events and double the limits. One Fargate task (0.5 vCPU / 1 GB) handles a pilot comfortably. Migrations are safe if two tasks overlap during a deploy (they take turns under a database lock).
+Set the ECS service's **desired count to 1**. Live updates and rate limits are kept in the container's memory, so a second task would miss events and double the limits. One Fargate task (0.5 vCPU / 1 GB) handles a pilot comfortably. Two tasks overlapping during a deploy is safe for data: every change is a conditional write on DynamoDB.
 
 ## 6. Required Runtime Env
 
@@ -137,13 +135,12 @@ CD_RATE_LIMIT=true
 
 The privacy/terms contact is baked in at image build time (`VITE_OPERATOR_NAME`, `VITE_SUPPORT_EMAIL`; for the GitHub workflow set them as repository variables).
 
-Set this as a secret from SSM/Secrets Manager:
-
 ```text
-CD_DATABASE_URL=postgres://...
+CD_DYNAMODB_TABLE=cd-main
+CD_DYNAMODB_REGION=ap-south-1
 ```
 
-Do not set `CD_STORAGE_ACCESS_KEY` or `CD_STORAGE_SECRET_KEY` on ECS when using the app task role. The AWS SDK will use the task role automatically.
+There are no database secrets. Do not set `CD_STORAGE_ACCESS_KEY` or `CD_STORAGE_SECRET_KEY` on ECS when using the app task role. The AWS SDK uses the task role automatically, for S3 and DynamoDB.
 
 ## 7. Health Checks
 
@@ -153,14 +150,14 @@ The ALB target group should call:
 GET /ready
 ```
 
-Use `/health` for simple uptime checks and `/ready` for database readiness.
+Use `/health` for simple uptime checks and `/ready` for readiness (it checks the DynamoDB table).
 
 ## 8. First Shop
 
-Run `cdadmin` from your laptop or a one-off ECS task with network access to RDS:
+Run `cdadmin` from your laptop with your AWS credentials (no network access to a database server is needed):
 
 ```bash
-CD_DATABASE_URL='postgres://counter_drop:<password>@<rds-endpoint>:5432/counter_drop?sslmode=require' \
+CD_DYNAMODB_TABLE=cd-main CD_DYNAMODB_REGION=ap-south-1 \
 CD_PUBLIC_WEB_URL='https://app.your-domain.example' \
 ./bin/cdadmin create-shop \
   -slug first-shop \
@@ -175,10 +172,10 @@ Send the printed setup link to the owner.
 
 - `https://app.your-domain.example/health` returns 200.
 - `https://app.your-domain.example/ready` returns 200.
-- ECS task logs show migrations applied and no storage errors.
+- ECS task logs show "store ready" and no storage errors.
 - Upload URLs point to S3, not localhost.
 - S3 CORS allows phone uploads from the PWA domain.
-- RDS has automated backups enabled.
+- DynamoDB table has point-in-time recovery on (7 days) and TTL on `ttl` (`cdadmin create-table` does both).
 - S3 bucket: public access blocked, versioning off, `s3-lifecycle.json` applied.
 - ECS service desired count is 1.
 - `/privacy` shows your company name and support email.

@@ -60,18 +60,13 @@ func (s *Store) MarkFileDeleted(ctx context.Context, f DueFile) (shopID string, 
 }
 
 // MarkFileDeleteFailed schedules a retry with backoff (1, 5, 15 minutes).
-func (s *Store) MarkFileDeleteFailed(ctx context.Context, fileID string, cause error) (attempts int, err error) {
-	backoff := []time.Duration{time.Minute, 5 * time.Minute, 15 * time.Minute}
+func (s *Store) MarkFileDeleteFailed(ctx context.Context, f DueFile, cause error) (attempts int, err error) {
 	err = s.pool.QueryRow(ctx, `UPDATE cd_job_files SET delete_attempts = delete_attempts + 1, delete_status = 'failed',
-		last_delete_error = left($2, 300) WHERE id = $1 RETURNING delete_attempts`, fileID, cause.Error()).Scan(&attempts)
+		last_delete_error = left($2, 300) WHERE id = $1 RETURNING delete_attempts`, f.ID, cause.Error()).Scan(&attempts)
 	if err != nil {
 		return 0, err
 	}
-	wait := backoff[len(backoff)-1]
-	if attempts-1 < len(backoff) {
-		wait = backoff[attempts-1]
-	}
-	_, err = s.pool.Exec(ctx, `UPDATE cd_job_files SET next_attempt_at = $2 WHERE id = $1`, fileID, s.now().Add(wait))
+	_, err = s.pool.Exec(ctx, `UPDATE cd_job_files SET next_attempt_at = $2 WHERE id = $1`, f.ID, s.now().Add(DeleteBackoff(attempts)))
 	return attempts, err
 }
 

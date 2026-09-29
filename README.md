@@ -28,7 +28,7 @@ counter-drop/
 ├── pkg/cdclient/         # Shared Go client (placeholder)
 ├── web/                  # React/Vite PWA: drop page, ticket, shop board, settings, QR poster
 ├── contracts/openapi.yaml
-├── deploy/               # docker-compose (Postgres; MinIO optional), .env.example
+├── deploy/               # docker-compose (DynamoDB Local; MinIO optional), .env.example, AWS files
 ├── design/               # Design system, reference screens, Stitch export
 └── docs/                 # BRD, FSD, build plan, roadmap, architecture, code status
 ```
@@ -38,12 +38,11 @@ counter-drop/
 Needs Docker, Go 1.27 and Node 20+.
 
 ```bash
-docker compose -f deploy/docker-compose.yml up -d postgres
+docker compose -f deploy/docker-compose.yml up -d dynamodb     # DynamoDB Local (data store)
 
 # API (terminal 1)
 cd api
-go mod tidy          # first time
-CD_DATABASE_URL='postgres://counter_drop:counter_drop@localhost:55433/counter_drop?sslmode=disable' go run ./cmd/api
+CD_DYNAMODB_ENDPOINT=http://localhost:8000 go run ./cmd/api
 
 # Web (terminal 2)
 cd web
@@ -63,7 +62,6 @@ Files are stored on local disk by default (`api/.data/files`); set the `CD_STORA
 
 ```bash
 cd api
-docker compose -f ../deploy/docker-compose.yml exec postgres createdb -U counter_drop counter_drop_test   # once
-CD_TEST_DATABASE_URL='postgres://counter_drop:counter_drop@localhost:55433/counter_drop_test?sslmode=disable' go test ./...
+CD_TEST_DYNAMODB_ENDPOINT=http://localhost:8000 go test ./...   # needs DynamoDB Local running
 cd ../web && npm run build      # type-check + build
 ```

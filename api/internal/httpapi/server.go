@@ -17,7 +17,7 @@ import (
 )
 
 type Server struct {
-	Store   *store.Store
+	Store   store.Repository
 	Objects storage.ObjectStore
 	Local   *storage.LocalStore // non-nil when files are kept on local disk
 	Hub     *realtime.Hub

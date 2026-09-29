@@ -15,7 +15,7 @@ import (
 )
 
 type Deleter struct {
-	Store    *store.Store
+	Store    store.Repository
 	Objects  storage.ObjectStore
 	Hub      *realtime.Hub
 	Logger   *slog.Logger
@@ -76,7 +76,7 @@ func (d *Deleter) RunOnce(ctx context.Context) {
 				}
 			}
 			if err != nil {
-				attempts, _ := d.Store.MarkFileDeleteFailed(ctx, f.ID, err)
+				attempts, _ := d.Store.MarkFileDeleteFailed(ctx, f, err)
 				level := slog.LevelWarn
 				if attempts >= 3 {
 					level = slog.LevelError

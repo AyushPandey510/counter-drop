@@ -125,7 +125,7 @@ func (s *Store) ApplyMigrations(ctx context.Context, dir string) error {
 
 // --- helpers -------------------------------------------------------------------
 
-func newID(prefix string) string {
+func NewID(prefix string) string {
 	b := make([]byte, 10)
 	if _, err := rand.Read(b); err != nil {
 		panic(err)
@@ -147,7 +147,7 @@ func HashSecret(raw string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func equalHash(rawSecret, storedHash string) bool {
+func EqualHash(rawSecret, storedHash string) bool {
 	if rawSecret == "" || storedHash == "" {
 		return false
 	}

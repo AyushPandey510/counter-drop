@@ -9,8 +9,6 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /out/counter-drop-api .
 FROM alpine:3.22
 RUN adduser -D -H counterdrop
 WORKDIR /app
-# The API applies SQL migrations from ./migrations at startup, so they must ship in the image.
-COPY --from=build /src/migrations ./migrations
 COPY --from=build /out/counter-drop-api /usr/local/bin/counter-drop-api
 USER counterdrop
 EXPOSE 8080

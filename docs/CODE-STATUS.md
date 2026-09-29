@@ -1,6 +1,6 @@
 # Code status vs the plan
 
-Snapshot: 28 Sep 2026, after the MVP build. Verified by `go vet`, `go test ./...` against Postgres 17, `npm run build` (strict TypeScript), and a browser walkthrough (phone viewport for the customer, desktop for the board) with no console errors.
+Snapshot: 28 Sep 2026, after the MVP build (29 Sep: data moved from Postgres to DynamoDB, ADR-001 — the same suite passes on DynamoDB). Verified by `go vet`, `go test ./...`, `npm run build` (strict TypeScript), and a browser walkthrough (phone viewport for the customer, desktop for the board) with no console errors.
 
 **Summary:** the R1a walk-in pilot slice is built end to end. A customer scans the QR, uploads, sees the price, gets a token and a live ticket; staff sign in with a PIN, work the live board and mark collected; the deletion worker removes files 10 minutes after pickup and the customer's phone shows the deletion receipt.
 
@@ -8,7 +8,7 @@ Snapshot: 28 Sep 2026, after the MVP build. Verified by `go vet`, `go test ./...
 
 | Step | Status | Notes |
 | --- | --- | --- |
-| 01 Dev env | Partial | compose (Postgres; MinIO optional profile), `.env.example`, git files. No Makefile or CI yet |
+| 01 Dev env | Done | compose (DynamoDB Local; MinIO optional profile), `.env.example`, Makefile, CI |
 | 02 Storage | Done (MVP) | `ObjectStore`: R2/S3 presign PUT (length-signed) / GET / head / delete, plus **local disk** with HMAC-signed links (default) |
 | 03 OpenAPI | Stale | `contracts/openapi.yaml` predates the MVP; `api/README.md` has the current routes |
 | 04 API foundation | Done | recover, request ID, path-only logging, CORS, `{data}` / `{error}` envelope, strict JSON decode, context everywhere |
@@ -47,7 +47,7 @@ Built on top of the AWS/CI/Docker work added the same afternoon (Dockerfile, `de
 - **PWA:** Install button (Android/desktop), iPhone "Add to Home Screen" hint, in-app **Scan shop QR** (native detector or a small decoder on iPhone; only this app's shop codes accepted), manifest id/shortcuts/screenshots, first-visit cache cut from 1.6 MB to 0.9 MB.
 - **Privacy and terms pages** (`/privacy`, `/terms`), linked from every customer screen, sign-in, setup and the QR poster. Operator name and contact come from `VITE_OPERATOR_NAME` / `VITE_SUPPORT_EMAIL`. Needs a lawyer's review before a public launch.
 - **Rate limits and security headers** (see `api/README.md` → Protection).
-- **Deploy:** Caddy for automatic HTTPS on the VM path (`--profile https`), app bound to localhost, build-time legal contact, `CD_TRUST_PROXY`, S3 public-access block + lifecycle backstop + versioning-off guidance, "run exactly one task" on ECS, CI now runs the database tests against Postgres.
+- **Deploy:** Caddy for automatic HTTPS on the VM path (`--profile https`), app bound to localhost, build-time legal contact, `CD_TRUST_PROXY`, S3 public-access block + lifecycle backstop + versioning-off guidance, "run exactly one task" on ECS, CI runs the end-to-end tests against DynamoDB Local.
 
 Fixed: the shop board re-fetched the queue in an endless loop (≈220 requests/minute per open board) — now 2 requests in 30 s idle; two containers starting together could crash creating the migrations table; the security policy initially blocked the embedded fonts.
 
@@ -60,7 +60,7 @@ Verified: all Go tests (incl. rate limits, headers, concurrent migrations); 46-s
 | Server-Sent Events instead of WebSocket | One-way updates are all R1a needs; no extra dependency; works through proxies. Single API instance for now (hub is in memory) |
 | Page count on the phone with pdf.js; server falls back to "pages confirmed at counter" | No PDF parsing on the server in R1a |
 | Local-disk storage as the default | Pilot runs on one server without an R2 account; R2 switches on with env vars |
-| Postgres required; in-memory store removed | One code path to test |
+| DynamoDB only (Postgres removed, ADR-001) | Lambda + DynamoDB target; one code path to test |
 | Business day = local midnight (IST) | Tokens restart at A-01 each day |
 | PIN-only staff sign-in, shops created with `cdadmin` | OTP and self-signup are the next auth step |
 | One-time setup links instead of handing out PINs | Whoever creates an account never knows its PIN; works without SMS; becomes the "invite staff" step of the OTP signup later |
@@ -68,7 +68,7 @@ Verified: all Go tests (incl. rate limits, headers, concurrent migrations); 46-s
 
 ## Next
 
-1. Deploy a pilot: one small VM (API + built web via `CD_WEB_DIR`) + managed Postgres, HTTPS, `CD_STORAGE_SIGNING_KEY` set; or R2.
+1. ADR-001 phases 3–6: WebSocket live updates, Lambda entrypoints, CDK stack, staging audit on AWS.
 2. Phone OTP for owners and shop self-signup (step 07 — setup links, change PIN and staff management are done) + admin console (step 23).
 3. Refresh `contracts/openapi.yaml`; add Makefile and CI (step 01).
 4. R1b: Print nearby and UPI prepay.

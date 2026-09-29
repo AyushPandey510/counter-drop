@@ -7,7 +7,7 @@ This is the controlled-pilot launch path for Counter Drop R1a.
 Ready for launch means one real shop can use Counter Drop for walk-in jobs with:
 
 - HTTPS public URL for the PWA and API.
-- Postgres with persistent storage and backups.
+- DynamoDB table `cd-main` with point-in-time recovery on (`cdadmin create-table`).
 - File storage with either Cloudflare R2/S3 or a persistent VM disk.
 - Owner onboarding through `cdadmin` setup links.
 - Customer QR upload from real phones.
@@ -37,7 +37,9 @@ cp deploy/prod.env.example deploy/prod.env
 Fill these first:
 
 ```text
-POSTGRES_PASSWORD=...
+CD_DYNAMODB_TABLE=cd-main            # created once with: cdadmin create-table
+AWS_ACCESS_KEY_ID=...                # IAM user limited to the table and files bucket
+AWS_SECRET_ACCESS_KEY=...
 CD_DOMAIN=your-domain.example        # for the bundled HTTPS (Caddy)
 ACME_EMAIL=you@your-domain.example
 VITE_OPERATOR_NAME=Your Company Name # shown on /privacy and /terms
@@ -92,20 +94,13 @@ Using your own HTTPS layer instead (Nginx, Cloudflare Tunnel, an ALB)? Leave out
 
 **Quick HTTPS for phone testing without a server:** `cloudflared tunnel --url http://localhost:18080` prints a temporary `https://….trycloudflare.com` address; set `CD_PUBLIC_API_URL`/`CD_PUBLIC_WEB_URL` to it and restart the API. Camera scanning and app install need HTTPS.
 
-**Backups:** the database is the only thing to back up (files are deleted by design). On a VM, a daily dump:
-
-```bash
-docker compose --env-file prod.env -f docker-compose.prod.yml exec -T postgres \
-  pg_dump -U counter_drop -Fc counter_drop > backups/counter_drop-$(date +%F).dump
-```
-
-Keep 14 days and copy them off the server.
+**Backups:** the table is the only thing to back up (files are deleted by design). Point-in-time recovery keeps 7 days of continuous backups; `cdadmin create-table` turns it on. Restoring creates a new table you then point `CD_DYNAMODB_TABLE` at.
 
 ## Create First Real Shop
 
 ```bash
 cd api
-CD_DATABASE_URL='postgres://counter_drop:<password>@<host>:5432/counter_drop?sslmode=require' \
+CD_DYNAMODB_TABLE=cd-main CD_DYNAMODB_REGION=ap-south-1 \
 CD_PUBLIC_WEB_URL='https://your-domain.example' \
 go run ./cmd/cdadmin create-shop \
   -slug shop-slug \
@@ -146,7 +141,7 @@ Send the printed setup link to the owner. The owner chooses their own PIN. Avoid
 - Ready sound works after the customer taps the sound button.
 - Files are deleted after collection and deletion status is visible.
 - `GET /api/v1/cd/shop/deletion-health` shows no failed backlog for owner.
-- Database volume/backup exists.
+- DynamoDB point-in-time recovery is on.
 - File storage volume/bucket exists and is not temporary.
 - Demo seed is off for production.
 
@@ -160,4 +155,4 @@ git checkout <previous-good-sha>
 docker compose --env-file deploy/prod.env -f deploy/docker-compose.prod.yml up -d --build
 ```
 
-Do not delete Postgres or file volumes during rollback.
+Do not delete the DynamoDB table or file volumes during rollback. Data needs no migration step: old and new versions read the same items.

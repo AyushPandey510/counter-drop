@@ -9,14 +9,13 @@ import (
 )
 
 type Config struct {
-	Env           string // dev | staging | prod
-	Addr          string
-	PublicAPIURL  string // origin customers' phones use to reach the API (for local storage URLs)
-	DatabaseURL   string
-	LogLevel      slog.Level
-	WebOrigins    []string // allowed CORS origins
-	WebDir        string   // optional: serve the built PWA from this folder
-	MigrationsDir string
+	Env          string // dev | staging | prod
+	Addr         string
+	PublicAPIURL string // origin customers' phones use to reach the API (for local storage URLs)
+	Dynamo       DynamoConfig
+	LogLevel     slog.Level
+	WebOrigins   []string // allowed CORS origins
+	WebDir       string   // optional: serve the built PWA from this folder
 
 	Storage StorageConfig
 
@@ -37,6 +36,14 @@ type Config struct {
 	// client IP from X-Forwarded-For; set it only behind a proxy that sets that header (ALB, Caddy).
 	RateLimit  bool
 	TrustProxy bool
+}
+
+// DynamoConfig configures the DynamoDB table that holds all data (ADR-001). Endpoint is only for
+// DynamoDB Local in dev and tests; on AWS the SDK resolves it and credentials come from the Lambda role.
+type DynamoConfig struct {
+	Table    string
+	Region   string
+	Endpoint string
 }
 
 type StorageConfig struct {
@@ -61,14 +68,17 @@ func (c StorageConfig) S3Enabled() bool {
 func Load() Config {
 	env := str("CD_ENV", "dev")
 	return Config{
-		Env:           env,
-		Addr:          str("CD_API_ADDR", ":8080"),
-		PublicAPIURL:  str("CD_PUBLIC_API_URL", "http://localhost:8080"),
-		DatabaseURL:   str("CD_DATABASE_URL", ""),
-		LogLevel:      parseLogLevel(str("CD_LOG_LEVEL", "info")),
-		WebOrigins:    list("CD_WEB_ORIGINS", "http://localhost:5173"),
-		WebDir:        str("CD_WEB_DIR", ""),
-		MigrationsDir: str("CD_MIGRATIONS_DIR", "migrations"),
+		Env:          env,
+		Addr:         str("CD_API_ADDR", ":8080"),
+		PublicAPIURL: str("CD_PUBLIC_API_URL", "http://localhost:8080"),
+		Dynamo: DynamoConfig{
+			Table:    str("CD_DYNAMODB_TABLE", "cd-main"),
+			Region:   str("CD_DYNAMODB_REGION", str("AWS_REGION", "ap-south-1")),
+			Endpoint: str("CD_DYNAMODB_ENDPOINT", ""),
+		},
+		LogLevel:   parseLogLevel(str("CD_LOG_LEVEL", "info")),
+		WebOrigins: list("CD_WEB_ORIGINS", "http://localhost:5173"),
+		WebDir:     str("CD_WEB_DIR", ""),
 		Storage: StorageConfig{
 			Endpoint:   str("CD_STORAGE_ENDPOINT", ""),
 			Region:     str("CD_STORAGE_REGION", "auto"),

@@ -44,7 +44,7 @@ type SetupInfo struct {
 	ExpiresAt time.Time `json:"expiresAt"`
 }
 
-func newLinkToken() string {
+func NewLinkToken() string {
 	b := make([]byte, 18)
 	if _, err := rand.Read(b); err != nil {
 		panic(err)
@@ -116,7 +116,7 @@ func (s *Store) InviteStaff(ctx context.Context, shopID, name, role, createdBy s
 // purpose "reset" also clears their PIN and signs them out everywhere (lost or leaked PIN).
 func (s *Store) IssueSetupLink(ctx context.Context, shopID, staffID, purpose, createdBy string, ttl time.Duration) (SetupLink, error) {
 	if purpose != "setup" && purpose != "reset" {
-		return SetupLink{}, fmt.Errorf("%w: purpose must be setup or reset", domain.ErrValidation)
+		return SetupLink{}, ErrBadPurpose
 	}
 	var link SetupLink
 	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
@@ -144,7 +144,7 @@ func (s *Store) issueLinkTx(ctx context.Context, tx pgx.Tx, shopID, staffID, pur
 	if _, err := tx.Exec(ctx, `UPDATE cd_setup_links SET expires_at = $2 WHERE staff_id = $1 AND used_at IS NULL AND expires_at > $2`, staffID, now); err != nil {
 		return SetupLink{}, err
 	}
-	link := SetupLink{Token: newLinkToken(), Purpose: purpose, ExpiresAt: now.Add(ttl)}
+	link := SetupLink{Token: NewLinkToken(), Purpose: purpose, ExpiresAt: now.Add(ttl)}
 	_, err := tx.Exec(ctx, `INSERT INTO cd_setup_links (token_hash, staff_id, shop_id, purpose, created_by, expires_at)
 		VALUES ($1, $2, $3, $4, $5, $6)`, HashSecret(link.Token), staffID, shopID, purpose, createdBy, link.ExpiresAt)
 	return link, err
@@ -166,10 +166,10 @@ func (s *Store) SetupLinkInfo(ctx context.Context, token string) (SetupInfo, err
 
 // CompleteSetup uses a link once: sets the chosen PIN and signs the person in on this device.
 func (s *Store) CompleteSetup(ctx context.Context, token, pin string, sessionTTL time.Duration) (string, Principal, error) {
-	if err := checkNewPIN(pin); err != nil {
+	if err := CheckNewPIN(pin); err != nil {
 		return "", Principal{}, err
 	}
-	hash, err := hashPIN(pin)
+	hash, err := HashPIN(pin)
 	if err != nil {
 		return "", Principal{}, err
 	}
@@ -203,7 +203,7 @@ func (s *Store) CompleteSetup(ctx context.Context, token, pin string, sessionTTL
 
 // ChangePIN lets a signed-in person change their own PIN. Their other sessions are signed out.
 func (s *Store) ChangePIN(ctx context.Context, staffID, currentSession, currentPIN, newPIN string) error {
-	if err := checkNewPIN(newPIN); err != nil {
+	if err := CheckNewPIN(newPIN); err != nil {
 		return err
 	}
 	if currentPIN == newPIN {
@@ -212,7 +212,7 @@ func (s *Store) ChangePIN(ctx context.Context, staffID, currentSession, currentP
 	if err := s.checkPIN(ctx, staffID, currentPIN); err != nil {
 		return err
 	}
-	hash, err := hashPIN(newPIN)
+	hash, err := HashPIN(newPIN)
 	if err != nil {
 		return err
 	}
@@ -273,7 +273,7 @@ func (s *Store) OwnerID(ctx context.Context, shopID string) (string, error) {
 	return id, err
 }
 
-func checkNewPIN(pin string) error {
+func CheckNewPIN(pin string) error {
 	if !pinPattern.MatchString(pin) {
 		return fmt.Errorf("%w: PIN must be 4 digits", domain.ErrValidation)
 	}

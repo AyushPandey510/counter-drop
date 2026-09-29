@@ -1,18 +1,12 @@
 services:
-  postgres:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_DB: counter_drop
-      POSTGRES_USER: counter_drop
-      POSTGRES_PASSWORD: counter_drop
+  # DynamoDB Local: the whole data store in dev and tests (ADR-001). In-memory: data resets on restart.
+  #   docker compose -f deploy/docker-compose.yml up -d dynamodb
+  #   CD_DYNAMODB_ENDPOINT=http://localhost:8000 go run ./cmd/api     (creates the table on start)
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
     ports:
-      - "55433:5432"
-    volumes:
-      - counter_drop_pg:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U counter_drop"]
-      interval: 5s
-      retries: 10
+      - "8000:8000"
 
   # Optional: only if you want to test the S3 code path locally.
   # The API uses local-disk storage by default, so this is not needed for the MVP.
@@ -31,5 +25,4 @@ services:
       - counter_drop_minio:/data
 
 volumes:
-  counter_drop_pg:
   counter_drop_minio:
