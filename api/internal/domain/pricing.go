@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 // PriceList holds a shop's rates in paise (FSD §9.1). R1a supports A4 only.
@@ -44,7 +45,14 @@ type FileSettings struct {
 	Colour    bool   `json:"colour"`
 	BothSides bool   `json:"bothSides"`
 	PageRange string `json:"pageRange,omitempty"`
+	// Other marks a file sent for something other than printing (attach to a form, laminate, scan…).
+	// It isn't page-counted or priced; the shop sets the price before marking the job ready.
+	Other bool   `json:"other,omitempty"`
+	Note  string `json:"note,omitempty"` // what the customer wants done (Other files only)
 }
+
+// MaxNoteRunes caps the customer's note on an Other file.
+const MaxNoteRunes = 140
 
 func DefaultFileSettings() FileSettings { return FileSettings{Copies: 1} }
 
@@ -52,6 +60,7 @@ var (
 	ErrValidation        = errors.New("validation failed")
 	ErrPageRange         = errors.New("page_range")
 	ErrOptionUnavailable = errors.New("option_unavailable")
+	ErrPriceRequired     = errors.New("price_required")
 )
 
 // ParsePageRange turns "1-3,5" into the selected page numbers (1-based, sorted, unique).
@@ -108,6 +117,7 @@ type QuoteLine struct {
 	UnitPaise     int64  `json:"unitPaise"`
 	Unit          string `json:"unit"` // side | sheet
 	AmountPaise   int64  `json:"amountPaise"`
+	Other         bool   `json:"other,omitempty"` // priced by the shop, not by the price list
 }
 
 type Quote struct {
@@ -118,6 +128,7 @@ type Quote struct {
 	PagesTotal     int         `json:"pagesTotal"`
 	PagesToConfirm bool        `json:"pagesToConfirm"`
 	PriceVersion   string      `json:"priceVersion"`
+	OtherFiles     int         `json:"otherFiles"` // files the shop will price itself
 }
 
 type QuoteFile struct {
@@ -132,6 +143,10 @@ func NormaliseSettings(s FileSettings, kind string) FileSettings {
 	if s.Copies == 0 {
 		s.Copies = 1
 	}
+	if s.Other {
+		return FileSettings{Copies: 1, Other: true, Note: strings.TrimSpace(s.Note)}
+	}
+	s.Note = ""
 	if kind == "image" {
 		s.BothSides = false
 		s.PageRange = ""
@@ -146,6 +161,14 @@ func ComputeQuote(pl PriceList, files []QuoteFile) (Quote, error) {
 	q := Quote{Lines: make([]QuoteLine, 0, len(files))}
 	for _, f := range files {
 		s := NormaliseSettings(f.Settings, f.Kind)
+		if s.Other {
+			if utf8.RuneCountInString(s.Note) > MaxNoteRunes {
+				return Quote{}, fmt.Errorf("%w: keep the note under %d characters", ErrValidation, MaxNoteRunes)
+			}
+			q.OtherFiles++
+			q.Lines = append(q.Lines, QuoteLine{FileID: f.ID, Copies: 1, Other: true})
+			continue
+		}
 		if s.Copies < 1 || s.Copies > 99 {
 			return Quote{}, fmt.Errorf("%w: copies must be 1 to 99", ErrValidation)
 		}

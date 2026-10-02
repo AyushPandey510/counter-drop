@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, Download, ExternalLink, FileCheck2, LogOut, Moon, Play, Printer, QrCode, RotateCcw, Search, Settings, Sun, Undo2, UserRound, Volume2, VolumeX, X, Zap } from 'lucide-react'
+import { Check, Download, ExternalLink, FileCheck2, FilePlus2, LogOut, ReceiptText, Moon, Play, Printer, QrCode, RotateCcw, Search, Settings, Sun, Undo2, UserRound, Volume2, VolumeX, X, Zap } from 'lucide-react'
 import { ApiError } from '@/lib/api'
 import { chime, useLive, type LiveTicket } from '@/lib/live'
 import { clock, dayTime, minutesSince, mmss, rupees } from '@/lib/format'
@@ -24,12 +24,25 @@ const CANCEL_REASONS = [
 ] as const
 
 function settingsSummary(j: Job): string {
-  const f = j.files[0]?.settings
-  if (!f) return ''
-  const multi = j.files.some((x) => x.settings.colour !== f.colour || x.settings.bothSides !== f.bothSides || x.settings.copies !== f.copies)
+  const printed = j.files.filter((x) => !x.settings.other)
+  const f = printed[0]?.settings
+  if (!f) return 'Other only'
+  const multi = printed.some((x) => x.settings.colour !== f.colour || x.settings.bothSides !== f.bothSides || x.settings.copies !== f.copies)
   if (multi) return 'Mixed settings'
   return [f.colour ? 'Colour' : 'B/W', f.bothSides ? 'both sides' : 'one side', f.copies > 1 ? `×${f.copies}` : ''].filter(Boolean).join(' · ')
 }
+
+/** Files sent for something other than printing; the shop prices them when marking the job ready. */
+const otherFiles = (j: Job) => j.files.filter((f) => f.settings.other && f.deleteStatus === 'active')
+const needsOtherPrice = (j: Job) => j.otherPricePaise === undefined && j.files.some((f) => f.settings.other)
+
+/** Price as the shop sees it: "₹6 + ?" until the Other files are priced. */
+function priceLabel(j: Job): string {
+  if (j.pagesToConfirm) return '₹ ?'
+  return needsOtherPrice(j) ? `${rupees(j.priceTotalPaise)} + ?` : rupees(j.priceTotalPaise)
+}
+
+type ActBody = Record<string, string | number | boolean>
 
 export default function BoardPage() {
   const { session, call, logout, setShop } = useShopAuth()
@@ -46,6 +59,8 @@ export default function BoardPage() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Job[] | null>(null)
   const [now, setNow] = useState(Date.now())
+  const [pricing, setPricing] = useState<Job | null>(null) // Ready on a job with Other files: ask for the price
+  const [noReceipt, setNoReceipt] = useState<Record<string, boolean>>({}) // per job; receipts are on by default
   const known = useRef<Set<string> | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const soundRef = useRef(sound)
@@ -86,12 +101,18 @@ export default function BoardPage() {
     window.setTimeout(() => setToast(''), 3000)
   }
 
-  const act = async (job: Job, action: string, body: Record<string, string> = {}) => {
+  const act = async (job: Job, action: string, body: ActBody = {}) => {
+    if (action === 'ready' && needsOtherPrice(job) && body.otherPricePaise === undefined) {
+      setPricing(job)
+      return
+    }
+    if (action === 'collected' && noReceipt[job.id]) body = { ...body, noReceipt: true }
     try {
       await call<Job>(`/shop/jobs/${job.id}/${action}`, { body })
       await load()
       if (action === 'claim') setOpenId(job.id)
       if (action === 'ready' || action === 'collected' || action === 'cancel') setOpenId(null)
+      if (action === 'ready') setPricing(null)
     } catch (e) {
       if (e instanceof ApiError && e.code === 'already_claimed') flash(`${job.token} was taken by another counter.`)
       else flash(e instanceof ApiError ? e.message : 'Action failed')
@@ -314,7 +335,18 @@ export default function BoardPage() {
               <div className="space-y-2">
                 {list.length === 0 && <p className="rounded border border-dashed border-line p-4 text-center text-sm text-ink-subtle">Nothing here</p>}
                 {list.map((j) => (
-                  <JobCard key={j.id} job={j} now={now} rush={rush} undoSeconds={snap.undoWindowSeconds} onOpen={() => setOpenId(j.id)} act={act} markCopiesDeleted={markCopiesDeleted} />
+                  <JobCard
+                    key={j.id}
+                    job={j}
+                    now={now}
+                    rush={rush}
+                    undoSeconds={snap.undoWindowSeconds}
+                    onOpen={() => setOpenId(j.id)}
+                    act={act}
+                    markCopiesDeleted={markCopiesDeleted}
+                    receipt={!noReceipt[j.id]}
+                    toggleReceipt={() => setNoReceipt((m) => ({ ...m, [j.id]: !m[j.id] }))}
+                  />
                 ))}
               </div>
             </section>
@@ -322,7 +354,20 @@ export default function BoardPage() {
         })}
       </main>
 
-      {openJob && <JobPanel job={openJob} onClose={() => setOpenId(null)} act={act} call={call} flash={flash} reload={load} markCopiesDeleted={markCopiesDeleted} />}
+      {openJob && (
+        <JobPanel
+          job={openJob}
+          onClose={() => setOpenId(null)}
+          act={act}
+          call={call}
+          flash={flash}
+          reload={load}
+          markCopiesDeleted={markCopiesDeleted}
+          receipt={!noReceipt[openJob.id]}
+          toggleReceipt={() => setNoReceipt((m) => ({ ...m, [openJob.id]: !m[openJob.id] }))}
+        />
+      )}
+      {pricing && <OtherPriceDialog job={pricing} onCancel={() => setPricing(null)} onConfirm={(paise) => act(pricing, 'ready', { otherPricePaise: paise })} />}
       {copiesOpen && snap.copiesToDelete.length > 0 && (
         <CopiesDrawer
           jobs={snap.copiesToDelete}
@@ -374,14 +419,18 @@ function JobCard({
   onOpen,
   act,
   markCopiesDeleted,
+  receipt,
+  toggleReceipt,
 }: {
   job: Job
   now: number
   rush: boolean
   undoSeconds: number
   onOpen: () => void
-  act: (j: Job, a: string, b?: Record<string, string>) => void
+  act: (j: Job, a: string, b?: ActBody) => void
   markCopiesDeleted: (j: Job) => void
+  receipt: boolean
+  toggleReceipt: () => void
 }) {
   const age = minutesSince(job.queuedAt, now)
   const ageTone = job.state === 'queued' ? (age >= 20 ? 'danger' : age >= 10 ? 'attention' : 'neutral') : 'neutral'
@@ -399,7 +448,7 @@ function JobCard({
           )}
         </span>
         <span className="text-right">
-          <span className="block font-mono font-bold">{job.pagesToConfirm ? '₹ ?' : rupees(job.priceTotalPaise)}</span>
+          <span className="block font-mono font-bold">{priceLabel(job)}</span>
           {job.state === 'queued' && <Chip tone={ageTone}>{age} min</Chip>}
           {job.state === 'claimed' && job.claimedBy && <span className="block text-xs text-ink-muted">{job.claimedBy}</span>}
         </span>
@@ -407,6 +456,12 @@ function JobCard({
       <div className="mt-2 flex flex-wrap gap-2">
         {job.lane && <Chip>Lane {job.lane}</Chip>}
         <Chip tone="dark">WALK-IN</Chip>
+        {otherFiles(job).length > 0 && (
+          <Chip tone="action">
+            <FilePlus2 className="h-3 w-3" aria-hidden /> OTHER ×{otherFiles(job).length}
+          </Chip>
+        )}
+        {job.state === 'collected' && job.noReceipt && <Chip>No receipt</Chip>}
         {downloaded(job) && (
           <Chip tone={job.copiesDeletedAt ? 'ready' : 'attention'}>
             <Download className="h-3 w-3" aria-hidden /> {job.copiesDeletedAt ? 'Copy deleted' : 'Downloaded'}
@@ -432,6 +487,7 @@ function JobCard({
         )}
         {job.state === 'ready' && (
           <>
+            <ReceiptToggle on={receipt} toggle={toggleReceipt} compact />
             <Button size="md" variant="secondary" className="flex-1" onClick={() => act(job, 'collected', { paid: 'cash' })}>
               Paid cash
             </Button>
@@ -474,10 +530,14 @@ function JobPanel({
   flash,
   reload,
   markCopiesDeleted,
+  receipt,
+  toggleReceipt,
 }: {
   job: Job
   onClose: () => void
-  act: (j: Job, a: string, b?: Record<string, string>) => Promise<void>
+  receipt: boolean
+  toggleReceipt: () => void
+  act: (j: Job, a: string, b?: ActBody) => Promise<void>
   call: <T>(p: string, o?: { method?: string; body?: unknown }) => Promise<T>
   flash: (m: string) => void
   reload: () => Promise<void>
@@ -557,17 +617,28 @@ function JobPanel({
                   )}
                 </div>
               )}
-              <div className="mt-1 text-sm font-bold">
-                {f.pagesStatus === 'unknown' ? 'Pages: count at counter' : `${f.pages} page${f.pages === 1 ? '' : 's'}`}
-                {f.settings.pageRange ? ` · print pages ${f.settings.pageRange}` : ''} · {f.settings.colour ? 'COLOUR' : 'B/W'} · {f.settings.bothSides ? 'BOTH SIDES' : 'ONE SIDE'} · ×
-                {f.settings.copies}
-              </div>
+              {f.settings.other ? (
+                <div className="mt-1 rounded bg-surface-tint p-2 text-sm">
+                  <span className="font-bold">OTHER — you set the price</span>
+                  {f.settings.note ? <span className="mt-0.5 block">“{f.settings.note}”</span> : <span className="mt-0.5 block text-ink-muted">No note — ask the customer</span>}
+                </div>
+              ) : (
+                <div className="mt-1 text-sm font-bold">
+                  {f.pagesStatus === 'unknown' ? 'Pages: count at counter' : `${f.pages} page${f.pages === 1 ? '' : 's'}`}
+                  {f.settings.pageRange ? ` · print pages ${f.settings.pageRange}` : ''} · {f.settings.colour ? 'COLOUR' : 'B/W'} · {f.settings.bothSides ? 'BOTH SIDES' : 'ONE SIDE'} · ×
+                  {f.settings.copies}
+                </div>
+              )}
             </div>
           ))}
           <div className="flex items-center justify-between rounded bg-surface-tint p-3">
             <span className="font-semibold">Collect at counter</span>
-            <span className="font-mono text-xl font-bold">{job.pagesToConfirm ? 'Confirm pages' : rupees(job.priceTotalPaise)}</span>
+            <span className="font-mono text-xl font-bold">{job.pagesToConfirm ? 'Confirm pages' : priceLabel(job)}</span>
           </div>
+          {job.otherPricePaise !== undefined && (
+            <p className="px-1 text-xs text-ink-muted">Includes {rupees(job.otherPricePaise)} you set for Other files.</p>
+          )}
+          {needsOtherPrice(job) && <p className="px-1 text-xs text-ink-muted">You'll enter the price for Other files when you mark it ready.</p>}
         </div>
         <div className="space-y-2 border-t border-line p-4">
           {job.state === 'queued' && (
@@ -587,6 +658,9 @@ function JobPanel({
           )}
           {job.state === 'ready' && (
             <div className="grid grid-cols-2 gap-2">
+              <div className="col-span-2">
+                <ReceiptToggle on={receipt} toggle={toggleReceipt} />
+              </div>
               <Button variant="secondary" onClick={() => act(job, 'collected', { paid: 'cash' })}>
                 Paid cash
               </Button>
@@ -682,5 +756,81 @@ function CopiesDrawer({ jobs, onClose, onOpen, markCopiesDeleted }: { jobs: Job[
         </ul>
       </aside>
     </div>
+  )
+}
+
+/** Ask for the shop's price for Other files before marking a job ready. */
+function OtherPriceDialog({ job, onCancel, onConfirm }: { job: Job; onCancel: () => void; onConfirm: (paise: number) => void }) {
+  const [value, setValue] = useState('')
+  const rupeesIn = Number(value)
+  const valid = value.trim() !== '' && Number.isFinite(rupeesIn) && rupeesIn >= 0 && rupeesIn <= 50000
+  const paise = valid ? Math.round(rupeesIn * 100) : 0
+  const items = otherFiles(job)
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.72)] p-4" onClick={onCancel}>
+      <form
+        role="dialog"
+        aria-label={`Price for ${job.token}`}
+        className="w-full max-w-sm space-y-3 rounded border-2 border-ink bg-surface p-4"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (valid) onConfirm(paise)
+        }}
+      >
+        <h2 className="text-lg font-bold">
+          <span className="font-mono">{job.token}</span> · price for Other files
+        </h2>
+        <ul className="space-y-1 text-sm">
+          {items.map((f) => (
+            <li key={f.id} className="rounded bg-surface-tint p-2">
+              <span className="block truncate font-semibold">{f.filename}</span>
+              {f.settings.note && <span className="block">“{f.settings.note}”</span>}
+            </li>
+          ))}
+        </ul>
+        <label className="block text-sm font-semibold">
+          Your price (₹)
+          <input
+            autoFocus
+            inputMode="decimal"
+            value={value}
+            onChange={(e) => setValue(e.target.value.replace(/[^0-9.]/g, ''))}
+            className="mt-1 h-12 w-full rounded border-[1.5px] border-line bg-surface px-3 font-mono text-xl"
+            placeholder="0"
+            aria-label="Price in rupees"
+          />
+        </label>
+        <div className="flex justify-between rounded bg-surface-tint p-3 text-sm">
+          <span>Total for the customer</span>
+          <span className="font-mono text-lg font-bold">{rupees(job.priceTotalPaise + paise)}</span>
+        </div>
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" className="flex-1" onClick={onCancel}>
+            Back
+          </Button>
+          <Button type="submit" variant="ready" className="flex-1" disabled={!valid}>
+            <Check className="h-4 w-4" aria-hidden /> Mark ready
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+/** "Give receipt" — on by default; the shop can switch it off for a job before collecting. */
+function ReceiptToggle({ on, toggle, compact }: { on: boolean; toggle: () => void; compact?: boolean }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={toggle}
+      title={on ? 'Customer gets a receipt (tap to turn off)' : 'No receipt for this job (tap to turn on)'}
+      className={`flex items-center justify-center gap-2 rounded border-[1.5px] px-3 text-sm font-semibold ${compact ? 'min-h-[48px]' : 'min-h-[44px] w-full'} ${on ? 'border-ready bg-ready-bg text-ready' : 'border-line text-ink-muted line-through'}`}
+    >
+      <ReceiptText className="h-4 w-4" aria-hidden /> {compact ? '' : on ? 'Give receipt' : 'No receipt'}
+      {compact && <span className="sr-only">{on ? 'Give receipt' : 'No receipt'}</span>}
+    </button>
   )
 }

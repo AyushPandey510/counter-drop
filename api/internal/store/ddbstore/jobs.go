@@ -351,12 +351,23 @@ func (s *Store) apply(r *jobRec, in store.ActInput, now time.Time) (*jobEvent, e
 	if err != nil {
 		return nil, err
 	}
+	if in.Action == domain.ActionReady && j.HasOther() {
+		if in.OtherPrice == nil {
+			return nil, domain.ErrPriceRequired
+		}
+		if err := j.SetOtherPrice(*in.OtherPrice); err != nil {
+			return nil, err
+		}
+	}
 	files := r.Files
 	r.Job = j
 	r.Job.Files = nil
 	r.Files = files
 	if in.Action == domain.ActionCollected && (in.Paid == "cash" || in.Paid == "upi") {
 		r.Job.PaidMethod = in.Paid
+	}
+	if in.Action == domain.ActionCollected {
+		r.Job.NoReceipt = in.NoReceipt
 	}
 	if fx.ScheduleDelete != nil {
 		for i := range r.Files {

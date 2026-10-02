@@ -8,6 +8,9 @@ export interface FileSettings {
   colour: boolean
   bothSides: boolean
   pageRange?: string
+  /** Sent for something other than printing; the shop sets the price. */
+  other?: boolean
+  note?: string
 }
 
 export interface JobFile {
@@ -46,6 +49,9 @@ export interface Job {
   claimedBy?: string
   cancelReason?: string
   paidMethod?: string
+  /** The shop's price for Other files, included in priceTotalPaise; absent until set. */
+  otherPricePaise?: number
+  noReceipt?: boolean
   createdAt: string
   updatedAt: string
   queuedAt?: string
@@ -101,6 +107,7 @@ export interface QuoteLine {
   unitPaise: number
   unit: 'side' | 'sheet'
   amountPaise: number
+  other?: boolean
 }
 
 export interface Quote {
@@ -111,6 +118,7 @@ export interface Quote {
   pagesTotal: number
   pagesToConfirm: boolean
   priceVersion: string
+  otherFiles: number
 }
 
 export interface Ticket {

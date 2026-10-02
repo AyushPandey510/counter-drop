@@ -146,8 +146,10 @@ func (s *Server) jobAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Reason string `json:"reason"`
-		Paid   string `json:"paid"`
+		Reason     string `json:"reason"`
+		Paid       string `json:"paid"`
+		OtherPrice *int64 `json:"otherPricePaise"` // ready: the shop's price for Other files
+		NoReceipt  bool   `json:"noReceipt"`       // collected: don't give a receipt
 	}
 	if r.ContentLength != 0 {
 		if err := decode(r, &body); err != nil {
@@ -157,6 +159,7 @@ func (s *Server) jobAction(w http.ResponseWriter, r *http.Request) {
 	}
 	j, err := s.Store.Act(r.Context(), r.PathValue("id"), store.ActInput{
 		Action: action, Actor: actor(r), ShopID: principal(r.Context()).Staff.ShopID, Reason: body.Reason, Paid: body.Paid,
+		OtherPrice: body.OtherPrice, NoReceipt: body.NoReceipt,
 	})
 	if err != nil {
 		s.fail(w, r, err)

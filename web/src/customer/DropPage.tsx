@@ -27,6 +27,9 @@ interface LocalFile {
   progress: number
   error?: string
   pageRange: string
+  /** Sent for something other than printing (attach to a form, laminate…): the shop sets the price. */
+  other: boolean
+  note: string
 }
 
 let seq = 0
@@ -146,6 +149,8 @@ export default function DropPage() {
         status: 'checking',
         progress: 0,
         pageRange: '',
+        other: false,
+        note: '',
       })
     }
     const total = [...existing, ...fresh].reduce((s, f) => s + f.file.size, 0)
@@ -266,7 +271,20 @@ export default function DropPage() {
     }
   }
 
+  const setPurpose = async (lf: LocalFile, other: boolean, note: string) => {
+    patchFile(lf.clientId, { other, note, error: undefined })
+    if (!job || !lf.fileId) return
+    const fileId = lf.fileId
+    const st = other ? { copies: 1, colour: false, bothSides: false, other: true, note } : { ...settings, pageRange: lf.pageRange }
+    try {
+      await track(() => api<Ticket>(`/jobs/${job.id}`, { method: 'PATCH', body: { files: [{ fileId, settings: st }] }, secret: job.secret }))
+    } catch (e) {
+      patchFile(lf.clientId, { error: e instanceof ApiError ? e.message : 'Could not update' })
+    }
+  }
+
   const live = files.filter((f) => f.status !== 'locked' && f.status !== 'error')
+  const allOther = live.length > 0 && live.every((f) => f.other)
   const allUploaded = live.length > 0 && live.every((f) => f.status === 'done')
   const quote = ticket?.quote
 
@@ -287,7 +305,9 @@ export default function DropPage() {
         token: tk.job.token,
         createdAt: Date.now(),
       })
-      navigate(`/t/${job.id}`, { replace: true })
+      // Push, not replace: Back from the ticket returns to a fresh drop page for this shop instead of
+      // leaving the site (customers who opened it from the QR would otherwise have to scan again).
+      navigate(`/t/${job.id}`)
     } catch (e) {
       if (e instanceof ApiError && e.code === 'price_changed') {
         await track(() => api<Ticket>(`/jobs/${job.id}`, { secret: job.secret }))
@@ -342,6 +362,15 @@ export default function DropPage() {
       {quote?.lines.map((l) => {
         const f = files.find((x) => x.fileId === l.fileId)
         if (!f) return null
+        if (l.other)
+          return (
+            <div key={l.fileId} className="flex justify-between gap-3 py-1 text-sm">
+              <span className="truncate">
+                {f.file.name} · {t('otherUse')}
+              </span>
+              <span className="shrink-0 text-ink-muted">{t('shopSets')}</span>
+            </div>
+          )
         return (
           <div key={l.fileId} className="flex justify-between gap-3 py-1 text-sm">
             <span className="truncate">
@@ -354,7 +383,8 @@ export default function DropPage() {
       })}
       <div className="mt-2 flex items-end justify-between border-t border-divider pt-2">
         <div>
-          <div className="font-mono text-2xl font-bold tabular">{quote ? rupees(quote.totalPaise) : '—'}</div>
+          <div className="font-mono text-2xl font-bold tabular">{quote ? rupees(quote.totalPaise) + (quote.otherFiles > 0 ? ' +' : '') : '—'}</div>
+          {quote && quote.otherFiles > 0 && <div className="text-sm font-semibold text-action">{t('plusOther')}</div>}
           <div className="text-xs text-ink-muted">{quote?.pagesToConfirm ? t('priceAtCounter') : t('payAtCounter')}</div>
         </div>
         <WaitChip shop={shop} />
@@ -467,6 +497,7 @@ export default function DropPage() {
                   onRemove={() => removeFile(lf)}
                   onRetry={() => retryFile(lf)}
                   onRange={(r) => setPageRange(lf, r)}
+                  onPurpose={(other, note) => setPurpose(lf, other, note)}
                 />
               ))}
               <Button variant="secondary" className="w-full" onClick={() => inputRef.current?.click()} disabled={sending}>
@@ -478,7 +509,7 @@ export default function DropPage() {
 
           {error && <Banner tone="danger">{error}</Banner>}
 
-          {files.length > 0 && (
+          {files.length > 0 && !allOther && (
             <Card className="space-y-4 p-4">
               <div className="flex items-baseline justify-between">
                 <h2 className="text-lg font-bold">{t('settings')}</h2>
@@ -564,7 +595,7 @@ export default function DropPage() {
                 <Button size="lg" className="w-full" onClick={send} disabled={!allUploaded || sending || !quote || syncing > 0}>
                   {sending ? <Spinner /> : null}
                   {sending ? t('sending') : !allUploaded ? t('uploading') : t('send')}
-                  {quote && allUploaded && !sending ? <span className="ml-auto rounded bg-white/15 px-2 font-mono text-sm">{rupees(quote.totalPaise)}</span> : null}
+                  {quote && allUploaded && !sending ? <span className="ml-auto rounded bg-white/15 px-2 font-mono text-sm">{rupees(quote.totalPaise)}{quote.otherFiles > 0 ? ' +' : ''}</span> : null}
                 </Button>
               </div>
             </>
@@ -589,8 +620,23 @@ function WaitChip({ shop }: { shop: PublicShop }) {
   )
 }
 
-function FileRow({ lf, quote, onRemove, onRetry, onRange }: { lf: LocalFile; quote?: { amountPaise: number }; onRemove: () => void; onRetry: () => void; onRange: (r: string) => void }) {
+function FileRow({
+  lf,
+  quote,
+  onRemove,
+  onRetry,
+  onRange,
+  onPurpose,
+}: {
+  lf: LocalFile
+  quote?: { amountPaise: number }
+  onRemove: () => void
+  onRetry: () => void
+  onRange: (r: string) => void
+  onPurpose: (other: boolean, note: string) => void
+}) {
   const { t } = useI18n()
+  const [note, setNote] = useState(lf.note)
   const [editRange, setEditRange] = useState(false)
   const [range, setRange] = useState(lf.pageRange)
   const Icon = lf.mime.startsWith('image/') ? ImageIcon : FileText
@@ -616,7 +662,8 @@ function FileRow({ lf, quote, onRemove, onRetry, onRange }: { lf: LocalFile; quo
           </div>
         </div>
         <div className="text-right">
-          {lf.status === 'done' && quote && lf.pages > 0 && <div className="font-mono font-bold tabular">{rupees(quote.amountPaise)}</div>}
+          {lf.status === 'done' && lf.other && <div className="text-xs font-semibold text-ink-muted">{t('shopSets')}</div>}
+          {lf.status === 'done' && !lf.other && quote && lf.pages > 0 && <div className="font-mono font-bold tabular">{rupees(quote.amountPaise)}</div>}
           <button type="button" onClick={onRemove} className="p-2 text-ink-muted hover:text-danger" aria-label={`${t('remove')} ${lf.file.name}`}>
             <Trash2 className="h-5 w-5" aria-hidden />
           </button>
@@ -644,7 +691,39 @@ function FileRow({ lf, quote, onRemove, onRetry, onRange }: { lf: LocalFile; quo
           )}
         </p>
       )}
-      {lf.status === 'done' && lf.mime === 'application/pdf' && lf.pages > 1 && (
+      {lf.status === 'done' && (
+        <div className="mt-2 space-y-2">
+          <div role="radiogroup" aria-label={t('otherNoteLabel')} className="grid grid-cols-2 gap-2">
+            {[false, true].map((o) => (
+              <button
+                key={String(o)}
+                type="button"
+                role="radio"
+                aria-checked={lf.other === o}
+                onClick={() => lf.other !== o && onPurpose(o, note)}
+                className={`min-h-[44px] rounded px-3 text-sm font-semibold ${lf.other === o ? 'border-2 border-action bg-surface-tint text-ink' : 'border-[1.5px] border-line bg-surface text-ink-muted'}`}
+              >
+                {o ? t('otherUse') : t('printIt')}
+              </button>
+            ))}
+          </div>
+          {lf.other && (
+            <label className="block text-sm">
+              <span className="font-semibold">{t('otherNoteLabel')}</span>
+              <input
+                value={note}
+                maxLength={140}
+                onChange={(e) => setNote(e.target.value)}
+                onBlur={() => note !== lf.note && onPurpose(true, note)}
+                placeholder={t('otherNotePh')}
+                className="mt-1 h-11 w-full rounded border-[1.5px] border-line bg-surface px-2 text-base focus:border-action focus:outline-none"
+              />
+            </label>
+          )}
+          {lf.other && lf.error && !bad && <p className="text-sm text-danger">{lf.error}</p>}
+        </div>
+      )}
+      {lf.status === 'done' && !lf.other && lf.mime === 'application/pdf' && lf.pages > 1 && (
         <div className="mt-2 text-sm">
           {editRange ? (
             <form

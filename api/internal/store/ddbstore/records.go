@@ -138,6 +138,7 @@ func (r *jobRec) domainJob() domain.Job {
 		jf := f.F
 		if jf.DeletedAt != nil {
 			jf.Filename = "" // names are dropped once files are gone (FS-12.3)
+			jf.Settings.Note = ""
 		}
 		jf.Settings = domain.NormaliseSettings(jf.Settings, domain.FileKind(jf.Mime))
 		j.Files = append(j.Files, jf)

@@ -298,8 +298,10 @@ func (s *Server) updateJob(w http.ResponseWriter, r *http.Request) {
 		}
 		files = nil
 		for _, f := range cur.Files {
-			if f.DeleteStatus == domain.DeleteStatusActive {
+			// Print options apply to printed files; files sent as Other keep their own settings.
+			if f.DeleteStatus == domain.DeleteStatusActive && !f.Settings.Other {
 				st := *body.ApplyToAll
+				st.Other, st.Note = false, ""
 				st.PageRange = f.Settings.PageRange
 				files = append(files, store.FileSettingsUpdate{FileID: f.ID, Settings: st})
 			}

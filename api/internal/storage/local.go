@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
 	"net/url"
 	"os"
@@ -184,7 +183,7 @@ func (s *LocalStore) Handler() http.Handler {
 			defer f.Close()
 			st, _ := f.Stat()
 			w.Header().Set("Content-Type", ct)
-			w.Header().Set("Content-Disposition", mime.FormatMediaType(disp, map[string]string{"filename": safeFilename(q.Get("fn"))}))
+			w.Header().Set("Content-Disposition", ContentDisposition(disp, q.Get("fn")))
 			w.Header().Set("Cache-Control", "private, no-store")
 			http.ServeContent(w, r, "", st.ModTime(), f)
 		case http.MethodOptions:

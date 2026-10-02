@@ -302,7 +302,7 @@ paths:
           required: true
           schema: { type: string }
       responses:
-        "101": { description: WebSocket; each message is {"type":…,"data":…}; send {"type":"ping"} as a heartbeat }
+        "101": { description: 'WebSocket; each message is {"type":…,"data":…}; send {"type":"ping"} as a heartbeat' }
         "401": { $ref: "#/components/responses/Error" }
 
   /api/v1/cd/shop/staff-names:
@@ -583,6 +583,13 @@ paths:
                 paid:
                   type: string
                   description: Optional payment method recorded on collect.
+                otherPricePaise:
+                  type: integer
+                  format: int64
+                  description: Ready only. The shop's price for files sent as Other (0–5000000); required when the job has any (422 price_required).
+                noReceipt:
+                  type: boolean
+                  description: Collected only. The shop chose not to give a receipt (default false = receipt).
       responses:
         "200": { $ref: "#/components/responses/Job" }
         "409": { $ref: "#/components/responses/Error" }
@@ -921,6 +928,8 @@ components:
         colour: { type: boolean, default: false }
         bothSides: { type: boolean, default: false }
         pageRange: { type: string, example: "1-3,5" }
+        other: { type: boolean, description: "Sent for something other than printing; not priced by the price list" }
+        note: { type: string, maxLength: 140, description: "What the shop should do (Other files only); cleared when the file is deleted" }
     QuoteLine:
       type: object
       properties:
@@ -933,6 +942,7 @@ components:
         bothSides: { type: boolean }
         unitPaise: { type: integer, format: int64 }
         unit: { type: string, enum: [side, sheet, ""] }
+        other: { type: boolean }
         amountPaise: { type: integer, format: int64 }
     Quote:
       type: object
@@ -946,6 +956,7 @@ components:
         pagesTotal: { type: integer }
         pagesToConfirm: { type: boolean }
         priceVersion: { type: string }
+        otherFiles: { type: integer, description: "Files the shop will price itself" }
 
     WaitEstimate:
       type: object
@@ -1036,6 +1047,8 @@ components:
         claimedBy: { type: string }
         cancelReason: { type: string }
         paidMethod: { type: string }
+        otherPricePaise: { type: integer, format: int64, description: "Shop's price for Other files, included in priceTotalPaise; absent until set" }
+        noReceipt: { type: boolean }
         businessDay: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }

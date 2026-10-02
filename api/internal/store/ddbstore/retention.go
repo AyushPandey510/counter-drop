@@ -62,6 +62,7 @@ func (s *Store) MarkFileDeleted(ctx context.Context, due store.DueFile) (string,
 			return nil, store.ErrNotFound
 		}
 		f.F.DeleteStatus, f.F.DeletedAt, f.F.ObjectKey, f.F.Filename, f.LastDeleteError = domain.DeleteStatusDeleted, &now, "", "", ""
+		f.F.Settings.Note = "" // the note can describe the document; it goes with the file
 		remaining := 0
 		for _, x := range r.Files {
 			if x.F.DeletedAt == nil {

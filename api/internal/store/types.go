@@ -58,6 +58,9 @@ type ActInput struct {
 	ShopID string // required for staff: the job must belong to this shop
 	Reason string
 	Paid   string // "", cash, upi — recorded on collected (reports only)
+	// OtherPrice is the shop's price for Other files, required to mark such a job ready.
+	OtherPrice *int64
+	NoReceipt  bool // on collected: the shop chose not to give a receipt
 }
 
 type QueueSnapshot struct {

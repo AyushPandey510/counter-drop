@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -106,6 +107,10 @@ type Job struct {
 	ClaimedBy      string     `json:"claimedBy,omitempty"`
 	CancelReason   string     `json:"cancelReason,omitempty"`
 	PaidMethod     string     `json:"paidMethod,omitempty"`
+	// OtherPrice is what the shop charged for Other files (set when marking ready); it is
+	// included in PriceTotal. Nil until the shop sets it.
+	OtherPrice     *int64     `json:"otherPricePaise,omitempty"`
+	NoReceipt      bool       `json:"noReceipt,omitempty"` // the shop chose not to give a receipt
 	BusinessDay    string     `json:"businessDay,omitempty"`
 	CreatedAt      time.Time  `json:"createdAt"`
 	UpdatedAt      time.Time  `json:"updatedAt"`
@@ -120,6 +125,33 @@ type Job struct {
 	CopiesDeleteRequestedAt *time.Time `json:"copiesDeleteRequestedAt,omitempty"`
 	CopiesDeletedAt         *time.Time `json:"copiesDeletedAt,omitempty"`
 	CopiesDeletedBy         string     `json:"copiesDeletedBy,omitempty"`
+}
+
+// HasOther reports whether any live file was sent for something other than printing.
+func (j Job) HasOther() bool {
+	for _, f := range j.Files {
+		if f.Settings.Other && f.DeleteStatus == DeleteStatusActive {
+			return true
+		}
+	}
+	return false
+}
+
+// MaxOtherPrice caps what the shop can charge for Other files (₹50,000).
+const MaxOtherPrice = 50_000_00
+
+// SetOtherPrice records the shop's price for Other files and folds it into the job total.
+func (j *Job) SetOtherPrice(paise int64) error {
+	if paise < 0 || paise > MaxOtherPrice {
+		return fmt.Errorf("%w: price must be between ₹0 and ₹50,000", ErrValidation)
+	}
+	prev := int64(0)
+	if j.OtherPrice != nil {
+		prev = *j.OtherPrice
+	}
+	j.PriceTotal = j.PriceTotal - prev + paise
+	j.OtherPrice = &paise
+	return nil
 }
 
 // Downloaded reports whether the shop saved any of the job's files to its own device.

@@ -152,7 +152,7 @@ func SubmitCheck(sh domain.Shop, j domain.Job, priceVersion string) (domain.Quot
 		if f.UploadStatus != domain.UploadStatusUploaded {
 			return domain.Quote{}, false, ErrUploadsIncomplete
 		}
-		anyColour = anyColour || f.Settings.Colour
+		anyColour = anyColour || (f.Settings.Colour && !f.Settings.Other)
 		active.Files = append(active.Files, f)
 	}
 	if live == 0 {

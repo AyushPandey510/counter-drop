@@ -89,7 +89,7 @@ func (s *S3Store) PresignGet(ctx context.Context, key, filename, contentType str
 	req, err := s.presign.PresignGetObject(ctx, &s3.GetObjectInput{
 		Bucket:                     aws.String(s.bucket),
 		Key:                        aws.String(key),
-		ResponseContentDisposition: aws.String(disp + `; filename="` + safeFilename(filename) + `"`),
+		ResponseContentDisposition: aws.String(ContentDisposition(disp, filename)),
 		ResponseContentType:        aws.String(contentType),
 		ResponseCacheControl:       aws.String("private, no-store"),
 	}, func(o *s3.PresignOptions) { o.Expires = s.dur.GetTTL })
@@ -127,6 +127,45 @@ func (s *S3Store) Delete(ctx context.Context, key string) error {
 		}
 	}
 	return err
+}
+
+// ContentDisposition builds an ASCII-only header value that keeps non-English file names:
+// filename="<ASCII fallback>"; filename*=UTF-8”<percent-encoded> (RFC 6266 / RFC 5987).
+// S3 rejects presigned response headers that aren't ISO-8859-1, e.g. a Devanagari or emoji name.
+func ContentDisposition(disp, name string) string {
+	name = safeFilename(name)
+	var fallback strings.Builder
+	ascii := true
+	for _, r := range name {
+		if r < 0x20 || r > 0x7e {
+			ascii = false
+			fallback.WriteByte('_')
+			continue
+		}
+		fallback.WriteRune(r)
+	}
+	v := disp + `; filename="` + fallback.String() + `"`
+	if !ascii {
+		v += "; filename*=UTF-8''" + rfc5987(name)
+	}
+	return v
+}
+
+// rfc5987 percent-encodes everything except RFC 5987 attr-chars.
+func rfc5987(s string) string {
+	const hex = "0123456789ABCDEF"
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || strings.IndexByte("!#$&+-.^_`|~", c) >= 0 {
+			b.WriteByte(c)
+			continue
+		}
+		b.WriteByte('%')
+		b.WriteByte(hex[c>>4])
+		b.WriteByte(hex[c&15])
+	}
+	return b.String()
 }
 
 func safeFilename(name string) string {

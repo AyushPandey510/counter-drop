@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { BellRing, Check, Download, Lock, ShieldCheck, Share2, Trash2 } from 'lucide-react'
+import { BellRing, Check, Download, FilePlus2, Lock, ReceiptText, ShieldCheck, Share2, Trash2 } from 'lucide-react'
 import { api, ApiError, store } from '@/lib/api'
 import { useI18n, type Key } from '@/lib/i18n'
 import { clock, dayTime, mmss, rupees } from '@/lib/format'
@@ -10,6 +10,7 @@ import type { Job, JobState, Ticket } from '@/lib/types'
 import { Banner, Button, Card, Spinner, stateMeta } from '@/components/ui'
 import { Shell } from './DropPage'
 import { InstallCard } from '@/components/InstallCard'
+import { downloadReceipt } from '@/lib/receipt'
 
 const steps: { state: JobState; key: Key }[] = [
   { state: 'queued', key: 'inLine' },
@@ -152,6 +153,43 @@ export default function TicketPage() {
 
   const ourCopy = job.filesDeletedAt ? t('rOurDeleted', { time: clock(job.filesDeletedAt) }) : deleteAt ? t('rOurDeleteIn', { time: mmss(deleteAt - serverNow) }) : ''
   const shopCopies = shopCopiesText(job, t)
+  const hasOther = job.files.some((f) => f.settings.other)
+  const otherPending = hasOther && job.otherPricePaise === undefined
+  const fileDetail = (f: Job['files'][number]) => (f.settings.other ? t('otherUse') : f.pages ? `${f.pages} pp` : '')
+
+  const saveReceipt = async () => {
+    try {
+      const printPaise = job.priceTotalPaise - (job.otherPricePaise ?? 0)
+      await downloadReceipt(
+        {
+          title: t('receipt'),
+          shopName: shop.name,
+          shopAddress: shop.address,
+          token: job.token ?? '',
+          when: dayTime(job.collectedAt),
+          files: job.files.map((f, i) => ({ name: fileName(i), detail: fileDetail(f) })),
+          rows:
+            job.otherPricePaise !== undefined
+              ? [
+                  { label: t('printIt'), value: rupees(printPaise) },
+                  { label: t('otherUse'), value: rupees(job.otherPricePaise) },
+                ]
+              : [],
+          total: { label: t('rAmount'), value: rupees(job.priceTotalPaise) },
+          paid: { label: t('rPaid'), value: paidLabel(job, t) },
+          notes: [
+            // A saved image can't count down: give the clock time instead of "in 9:58".
+            { label: t('rOurCopy'), value: job.filesDeletedAt || !deleteAt ? ourCopy : t('rOurDeleteAt', { time: clock(new Date(deleteAt).toISOString()) }) },
+            { label: t('rShopCopies'), value: shopCopies },
+          ].filter((n) => n.value),
+          footer: `Counter Drop · ${job.id}`,
+        },
+        `CounterDrop-${shop.slug}-${job.token ?? job.id}.png`,
+      )
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not create the receipt')
+    }
+  }
 
   const share = async () => {
     const lines = [
@@ -194,6 +232,14 @@ export default function TicketPage() {
               </div>
             )}
           </section>
+
+          {/* Another file = a new job with its own token, at the same shop (no need to scan the QR again). */}
+          <Link
+            to={`/s/${shop.slug}`}
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded border-[1.5px] border-ink bg-surface px-4 font-semibold text-ink transition-colors hover:bg-surface-tint"
+          >
+            <FilePlus2 className="h-5 w-5" aria-hidden /> {t('newJob')}
+          </Link>
 
           {isActive && downloaded.length > 0 && (
             <div role="status" className="space-y-1 rounded border-[1.5px] border-attention bg-attention-bg p-3 text-sm text-attention">
@@ -255,6 +301,8 @@ export default function TicketPage() {
                 <div>
                   <div className="text-sm text-ink-muted">{job.pagesToConfirm ? t('priceAtCounter') : t('due')}</div>
                   <div className="font-mono text-2xl font-bold tabular">{rupees(job.priceTotalPaise || quote.totalPaise)}</div>
+                  {otherPending && <div className="text-sm font-semibold text-action">{t('plusOther')}</div>}
+                  {job.otherPricePaise !== undefined && <div className="text-xs text-ink-muted">{t('otherIncluded', { p: rupees(job.otherPricePaise) })}</div>}
                 </div>
                 <div className="text-right text-sm text-ink-muted">
                   {job.files.length} × <span className="font-mono">{job.pagesTotal || quote.pagesTotal}</span> pp
@@ -273,7 +321,7 @@ export default function TicketPage() {
             <Card className="p-4">
               <div className="mb-3 flex items-start justify-between gap-2">
                 <h2 className="flex items-center gap-2 text-lg font-bold">
-                  <ShieldCheck className="h-6 w-6 text-ready" aria-hidden /> {t('receipt')}
+                  <ShieldCheck className="h-6 w-6 text-ready" aria-hidden /> {job.noReceipt ? t('yourFiles') : t('receipt')}
                 </h2>
                 <div className="text-right text-xs text-ink-muted">
                   <div className="font-semibold text-ink">{shop.name}</div>
@@ -283,11 +331,14 @@ export default function TicketPage() {
                 </div>
               </div>
 
-              {job.state === 'collected' ? (
+              {job.state === 'collected' && job.noReceipt ? (
+                <p className="rounded bg-surface-tint p-3 text-sm text-ink-muted">{t('noReceiptNote')}</p>
+              ) : job.state === 'collected' ? (
                 <dl className="grid grid-cols-2 gap-2 rounded bg-surface-tint p-3 text-sm">
                   <div>
                     <dt className="text-ink-muted">{t('rAmount')}</dt>
                     <dd className="font-mono text-xl font-bold tabular">{rupees(job.priceTotalPaise)}</dd>
+                    {job.otherPricePaise !== undefined && <dd className="text-xs text-ink-muted">{t('otherIncluded', { p: rupees(job.otherPricePaise) })}</dd>}
                   </div>
                   <div>
                     <dt className="text-ink-muted">{t('rPaid')}</dt>
@@ -304,7 +355,7 @@ export default function TicketPage() {
                   <li key={f.id} className="flex items-start justify-between gap-3 py-2">
                     <span className="min-w-0">
                       <span className="block truncate font-semibold">{fileName(i)}</span>
-                      <span className="text-xs text-ink-muted">{f.pages ? `${f.pages} pp` : ''}</span>
+                      <span className="text-xs text-ink-muted">{fileDetail(f)}</span>
                     </span>
                     <span className={`shrink-0 text-right text-xs ${f.downloads > 0 ? 'font-semibold text-attention' : 'text-ink-muted'}`}>{fileStatus(f, t)}</span>
                   </li>
@@ -323,24 +374,26 @@ export default function TicketPage() {
               </dl>
 
               <div className="mt-4 flex flex-wrap gap-2">
+                {job.state === 'collected' && !job.noReceipt && (
+                  <Button size="sm" onClick={saveReceipt}>
+                    <ReceiptText className="h-4 w-4" aria-hidden /> {t('downloadReceipt')}
+                  </Button>
+                )}
                 {job.state === 'collected' && downloaded.length > 0 && !job.copiesDeleteRequestedAt && !job.copiesDeletedAt && (
                   <Button variant="danger" size="sm" onClick={askDelete}>
                     <Trash2 className="h-4 w-4" aria-hidden /> {t('askDelete')}
                   </Button>
                 )}
-                <Button variant="secondary" size="sm" onClick={share}>
-                  <Share2 className="h-4 w-4" aria-hidden /> {t('shareReceipt')}
-                </Button>
+                {!job.noReceipt && (
+                  <Button variant="secondary" size="sm" onClick={share}>
+                    <Share2 className="h-4 w-4" aria-hidden /> {t('shareReceipt')}
+                  </Button>
+                )}
               </div>
             </Card>
           )}
 
           <InstallCard />
-          {isDone && (
-            <Link to={`/s/${shop.slug}`} className="block text-center font-semibold text-action underline">
-              {t('newJob')}
-            </Link>
-          )}
           <p className="pb-6 text-center text-xs text-ink-muted lg:text-left">{t('help')}</p>
         </div>
       </div>

@@ -3,6 +3,7 @@ package domain
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -252,5 +253,44 @@ func TestWeakPIN(t *testing.T) {
 		if WeakPIN(p) {
 			t.Errorf("%s should be allowed", p)
 		}
+	}
+}
+
+func TestQuoteWithOtherFiles(t *testing.T) {
+	pl := DefaultPriceList()
+	q, err := ComputeQuote(pl, []QuoteFile{
+		{ID: "a", Kind: "pdf", Pages: 4, Settings: FileSettings{Copies: 1}},
+		{ID: "b", Kind: "pdf", Pages: 0, Settings: FileSettings{Other: true, Colour: true, Copies: 3, Note: " laminate "}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if q.TotalPaise != 800 || q.OtherFiles != 1 || q.PagesToConfirm || q.PagesTotal != 4 || !q.Lines[1].Other || q.Lines[1].AmountPaise != 0 {
+		t.Fatalf("quote: %+v", q)
+	}
+	// Only Other files: nothing to price, no minimum charge.
+	pl.MinCharge = 500
+	q, _ = ComputeQuote(pl, []QuoteFile{{ID: "b", Kind: "image", Pages: 1, Settings: FileSettings{Other: true}}})
+	if q.TotalPaise != 0 || q.MinChargePaise != 0 {
+		t.Fatalf("other only: %+v", q)
+	}
+	if s := NormaliseSettings(FileSettings{Note: "x", Copies: 2}, "pdf"); s.Note != "" {
+		t.Fatalf("note kept on a print file: %+v", s)
+	}
+	if _, err := ComputeQuote(pl, []QuoteFile{{ID: "b", Kind: "pdf", Settings: FileSettings{Other: true, Note: strings.Repeat("a", MaxNoteRunes+1)}}}); !errors.Is(err, ErrValidation) {
+		t.Fatalf("long note: %v", err)
+	}
+}
+
+func TestSetOtherPrice(t *testing.T) {
+	j := Job{PriceTotal: 600}
+	if err := j.SetOtherPrice(1500); err != nil || j.PriceTotal != 2100 || *j.OtherPrice != 1500 {
+		t.Fatalf("set: %v %d", err, j.PriceTotal)
+	}
+	if err := j.SetOtherPrice(1000); err != nil || j.PriceTotal != 1600 {
+		t.Fatalf("reset: %v %d", err, j.PriceTotal)
+	}
+	if err := j.SetOtherPrice(MaxOtherPrice + 1); !errors.Is(err, ErrValidation) || j.PriceTotal != 1600 {
+		t.Fatalf("too high: %v %d", err, j.PriceTotal)
 	}
 }
