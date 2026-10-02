@@ -81,3 +81,6 @@ desktop.ini
 
 # Files saved by the Claude app
 Claude outputs/
+
+# Lambda build output (deploy workflow)
+/build/

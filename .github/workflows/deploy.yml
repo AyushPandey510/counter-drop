@@ -1,0 +1,142 @@
+name: Deploy to AWS
+
+# Builds the Go Lambda binary and the PWA, then deploys deploy/cdk (one CloudFormation stack).
+# Manual for now: Actions → "Deploy to AWS" → Run workflow. Add `push: branches: [main]` once you trust it.
+#
+# Repo → Settings → Secrets and variables → Actions
+#   Secrets:   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY   (IAM user for deploys; see deploy/cdk/README.md)
+#              CD_REALTIME_KEY, CD_ORIGIN_SECRET          (each: `openssl rand -hex 32`; never change casually)
+#   Variables: AWS_REGION (default ap-south-1), ALARM_EMAIL, MONTHLY_BUDGET_USD (default 10),
+#              DOMAIN_NAME + CERTIFICATE_ARN (optional, add later), VITE_OPERATOR_NAME, VITE_SUPPORT_EMAIL
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-aws
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+  STACK: CounterDrop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required secrets
+        env:
+          A: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          B: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          C: ${{ secrets.CD_REALTIME_KEY }}
+          D: ${{ secrets.CD_ORIGIN_SECRET }}
+        run: |
+          missing=""
+          [ -n "$A" ] || missing="$missing AWS_ACCESS_KEY_ID"
+          [ -n "$B" ] || missing="$missing AWS_SECRET_ACCESS_KEY"
+          [ ${#C} -ge 32 ] || missing="$missing CD_REALTIME_KEY(>=32 chars)"
+          [ ${#D} -ge 32 ] || missing="$missing CD_ORIGIN_SECRET(>=32 chars)"
+          if [ -n "$missing" ]; then echo "::error::Missing repo secrets:$missing"; exit 1; fi
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache-dependency-path: api/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            deploy/cdk/package-lock.json
+
+      - name: Test API (unit)
+        working-directory: api
+        run: go test ./...
+
+      - name: Build Lambda binary (linux/arm64)
+        working-directory: api
+        run: |
+          mkdir -p ../build/lambda
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -tags lambda.norpc -trimpath -ldflags "-s -w" -o ../build/lambda/bootstrap ./cmd/lambda
+
+      - name: Build PWA
+        working-directory: web
+        env:
+          VITE_OPERATOR_NAME: ${{ vars.VITE_OPERATOR_NAME }}
+          VITE_SUPPORT_EMAIL: ${{ vars.VITE_SUPPORT_EMAIL }}
+        run: npm ci && npm run build
+
+      - name: Install CDK
+        working-directory: deploy/cdk
+        run: npm ci && npm test
+
+      - name: AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: CDK bootstrap (first run only)
+        working-directory: deploy/cdk
+        run: |
+          if aws cloudformation describe-stacks --stack-name CDKToolkit >/dev/null 2>&1; then
+            echo "Already bootstrapped."
+          else
+            npx cdk bootstrap "aws://$(aws sts get-caller-identity --query Account --output text)/$AWS_REGION"
+          fi
+
+      - name: Deploy
+        working-directory: deploy/cdk
+        env:
+          CD_REALTIME_KEY: ${{ secrets.CD_REALTIME_KEY }}
+          CD_ORIGIN_SECRET: ${{ secrets.CD_ORIGIN_SECRET }}
+          ALARM_EMAIL: ${{ vars.ALARM_EMAIL }}
+          MONTHLY_BUDGET_USD: ${{ vars.MONTHLY_BUDGET_USD || '10' }}
+          DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
+          CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
+        run: |
+          output() { aws cloudformation describe-stacks --stack-name "$STACK" --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text 2>/dev/null | grep -v '^None$' || true; }
+          deploy() { npx cdk deploy "$STACK" --require-approval never --outputs-file outputs.json; }
+          if [ -z "$DOMAIN_NAME" ]; then
+            # No custom domain yet: the app's public URL is the CloudFront address, known only after
+            # the first deploy. First run deploys twice; later runs reuse the existing address.
+            export CD_PUBLIC_URL="$(output CloudFrontUrl)"
+            deploy
+            if [ -z "$CD_PUBLIC_URL" ]; then
+              export CD_PUBLIC_URL="$(output CloudFrontUrl)"
+              echo "First deploy: setting public URL to $CD_PUBLIC_URL"
+              deploy
+            fi
+          else
+            # Keep the CloudFront address working for uploads while people move to the custom domain.
+            export CD_EXTRA_ORIGINS="$(output CloudFrontUrl)"
+            deploy
+          fi
+
+      - name: Smoke test
+        run: |
+          # Test through the CloudFront address: it resolves even before the custom domain's DNS exists.
+          CF=$(aws cloudformation describe-stacks --stack-name "$STACK" --query "Stacks[0].Outputs[?OutputKey=='CloudFrontUrl'].OutputValue" --output text)
+          SITE=$(aws cloudformation describe-stacks --stack-name "$STACK" --query "Stacks[0].Outputs[?OutputKey=='SiteUrl'].OutputValue" --output text)
+          API=$(aws cloudformation describe-stacks --stack-name "$STACK" --query "Stacks[0].Outputs[?OutputKey=='HttpApiUrl'].OutputValue" --output text)
+          check() { got=$(curl -s -o /dev/null -w '%{http_code}' "$2"); echo "$2 → $got (want $1)"; [ "$got" = "$1" ]; }
+          ok=1
+          check 200 "$CF/" || ok=0
+          check 200 "$CF/s/some-shop" || ok=0                      # SPA deep link → index.html
+          check 404 "$CF/api/v1/cd/shops/smoke-test-no-such-shop" || ok=0   # API via CloudFront: JSON 404
+          check 403 "$API/api/v1/cd/shops/smoke-test-no-such-shop" || ok=0    # API without CloudFront: refused
+          {
+            echo "### Counter Drop deployed"
+            echo "- Site: $SITE"
+            echo "- Next: run the **Admin** workflow → create-shop to make the first shop and owner setup link."
+          } >> "$GITHUB_STEP_SUMMARY"
+          [ "$ok" = 1 ]

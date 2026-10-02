@@ -1,7 +1,7 @@
 // Command lambda is the AWS Lambda binary (ADR-001). One binary, several handlers, chosen by CD_RUNTIME:
 //
 //	lambda-api      the HTTP API behind API Gateway (HTTP API, payload 2.0) and CloudFront
-//	lambda-sweeper  the deletion worker, run every minute by EventBridge Scheduler (reserved concurrency 1)
+//	lambda-sweeper  the deletion worker, run every minute by an EventBridge rule (no retries; the next run picks up)
 //	lambda-ws       API Gateway WebSocket routes: $connect (ticket check), $disconnect, $default (heartbeat)
 //	lambda-push     DynamoDB stream of the main table → live-update messages to open connections
 //

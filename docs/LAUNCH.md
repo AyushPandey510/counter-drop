@@ -1,5 +1,8 @@
 # Launch Runbook
 
+> **Production on AWS (current plan):** one CDK stack, deployed from GitHub Actions — see [`deploy/cdk/README.md`](../deploy/cdk/README.md). AWS services only for the MVP (S3 for files, no Cloudflare R2). The single-server options below remain for local or self-hosted pilots.
+
+
 This is the controlled-pilot launch path for Counter Drop R1a.
 
 ## Launch Definition

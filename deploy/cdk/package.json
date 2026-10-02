@@ -1,0 +1,23 @@
+{
+  "name": "counter-drop-cdk",
+  "private": true,
+  "type": "module",
+  "description": "AWS infrastructure for Counter Drop (ADR-001, AWS-only MVP)",
+  "scripts": {
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "deploy": "cdk deploy --require-approval never",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.272.0",
+    "constructs": "10.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "aws-cdk": "2.1144.0",
+    "tsx": "4.23.15",
+    "typescript": "~5.9.0"
+  }
+}

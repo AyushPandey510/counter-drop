@@ -1,0 +1,76 @@
+name: Admin
+
+# Runs cdadmin against the production DynamoDB table — create the first shop, invite staff, reset a PIN.
+# The printed setup link is a one-time secret (valid 48 h): keep this repository private, send the link
+# to the person directly, and re-issue it (reset-pin) if it leaks.
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: What to do
+        type: choice
+        options: [create-shop, add-staff, reset-pin, remove-staff, list-staff]
+      shop:
+        description: Shop link name (slug), e.g. imran-xerox — printed on the QR, can't change later
+        required: true
+      name:
+        description: create-shop → shop name; other commands → the person's first name
+        required: false
+      owner:
+        description: create-shop only — owner's first name
+        required: false
+      address:
+        description: create-shop only — address or landmark
+        required: false
+      role:
+        description: add-staff only
+        type: choice
+        options: [staff, owner]
+        default: staff
+
+concurrency:
+  group: admin-aws
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+  STACK: CounterDrop
+
+jobs:
+  admin:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache-dependency-path: api/go.sum
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Run cdadmin
+        working-directory: api
+        env:
+          CMD: ${{ inputs.command }}
+          SHOP: ${{ inputs.shop }}
+          NAME: ${{ inputs.name }}
+          OWNER: ${{ inputs.owner }}
+          ADDRESS: ${{ inputs.address }}
+          ROLE: ${{ inputs.role }}
+        run: |
+          out() { aws cloudformation describe-stacks --stack-name "$STACK" --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text; }
+          export CD_ENV=prod CD_DYNAMODB_TABLE="$(out TableName)" CD_PUBLIC_WEB_URL="$(out SiteUrl)"
+          case "$CMD" in
+            create-shop)  args=(-slug "$SHOP" -name "$NAME" -owner "$OWNER" -address "$ADDRESS") ;;
+            add-staff)    args=(-shop "$SHOP" -name "$NAME" -role "$ROLE") ;;
+            reset-pin|remove-staff) args=(-shop "$SHOP" -name "$NAME") ;;
+            list-staff)   args=(-shop "$SHOP") ;;
+          esac
+          go run ./cmd/cdadmin "$CMD" "${args[@]}"

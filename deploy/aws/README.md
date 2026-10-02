@@ -1,5 +1,8 @@
 # AWS Deployment
 
+> **Superseded.** This ECS Fargate + ECR path is replaced by the serverless CDK stack in [`deploy/cdk`](../cdk/README.md) (ADR-001). Kept for reference; the `Build AWS Image` workflow is no longer needed.
+
+
 > **Interim path.** The target is Lambda + DynamoDB built by a CDK stack (ADR-001, `docs/` in the project). Until that stack exists, this page runs the same container on ECS Fargate against the same DynamoDB table, so data carries over unchanged when you move to Lambda.
 
 This AWS shape runs the Counter Drop container:
